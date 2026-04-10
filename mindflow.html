@@ -456,17 +456,26 @@ function speakText(txt){
 }
 
 function processQueue(){
-  if(!audioQueue.length){ isSpeaking=false; return; }
+  if(!audioQueue.length){
+    isSpeaking=false;
+    // File vide = Max a fini de parler = relancer micro automatiquement
+    if(currentMode==='voice' && audioUnlocked){
+      setTimeout(function(){ startListen(); }, 500);
+    }
+    return;
+  }
   isSpeaking=true;
   var txt=audioQueue.shift();
-  if(isListening) stopListen();
+  // Couper micro pendant que Max parle
+  if(isListening){
+    isListening=false;
+    var mb=$('mic-btn'); if(mb) mb.classList.remove('listening');
+    var mh=$('mic-hint'); if(mh) mh.textContent='Max parle…';
+    try{ if(recognition) recognition.abort(); }catch(e){}
+  }
   setTalking(true);
   doSpeak(txt).then(function(){
     setTalking(false);
-    // Relancer micro auto après Max
-    if(currentMode==='voice' && audioUnlocked){
-      setTimeout(function(){ startListen(); }, 400);
-    }
     processQueue();
   });
 }
@@ -593,28 +602,45 @@ function setupRec(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){ switchMode('text'); return; }
   recognition=new SR();
-  recognition.lang='fr-FR'; recognition.continuous=false; recognition.interimResults=false;
+  recognition.lang='fr-FR';
+  recognition.continuous=false;
+  recognition.interimResults=false;
   recognition.onresult=function(e){
     var txt=e.results[0][0].transcript.trim();
     if(txt){ addLine('user',txt); setSubtitle(txt,true); stopListen(); askClaude(txt); }
   };
-  recognition.onerror=function(){ stopListen(); };
-  recognition.onend=function(){ if(isListening) stopListen(); };
+  recognition.onerror=function(err){
+    console.warn('Micro erreur:', err.error);
+    stopListen();
+    if(err.error==='not-allowed'||err.error==='service-not-allowed'){ switchMode('text'); }
+  };
+  recognition.onend=function(){ stopListen(); };
 }
 function startListen(){
-  if(!recognition){ setupRec(); if(!recognition) return; }
   if(isListening) return;
+  if(isSpeaking) return; // Max parle encore, ne pas interrompre
+  // Recréer l'instance recognition à chaque fois (évite états bloqués)
+  setupRec();
+  if(!recognition){ switchMode('text'); return; }
   isListening=true;
-  $('mic-btn').classList.add('listening');
-  $('mic-hint').textContent='Je t\'écoute…';
+  var mb=$('mic-btn'); if(mb) mb.classList.add('listening');
+  var mh=$('mic-hint'); if(mh) mh.textContent="J'écoute…";
   window.speechSynthesis&&window.speechSynthesis.cancel();
-  try{ recognition.start(); }catch(e){ stopListen(); }
+  try{
+    recognition.start();
+    console.log('Micro ON');
+  }catch(e){
+    console.warn('Micro start:', e);
+    isListening=false;
+    var mb2=$('mic-btn'); if(mb2) mb2.classList.remove('listening');
+  }
 }
 function stopListen(){
   isListening=false;
-  $('mic-btn').classList.remove('listening');
-  $('mic-hint').textContent='Appuie pour parler';
-  try{ recognition&&recognition.stop(); }catch(e){}
+  var mb=$('mic-btn'); if(mb) mb.classList.remove('listening');
+  var mh=$('mic-hint'); if(mh) mh.textContent='Appuie pour parler';
+  try{ if(recognition) recognition.stop(); }catch(e){}
+  recognition=null;
 }
 
 // ═══════════════════════
