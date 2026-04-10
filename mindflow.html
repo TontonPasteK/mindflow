@@ -359,7 +359,7 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 // STATE
 // ═══════════════════════
 var AKEY='', OKEY='';
-var history=[], userProfile=null, currentMode='voice';
+var chatHistory=[], userProfile=null, currentMode='voice';
 var selectedPlan=''; // 'free' ou 'premium'
 var userName='';
 var recognition=null, isListening=false;
@@ -521,7 +521,7 @@ function maxSpeak(txt){
 // CLAUDE API
 // ═══════════════════════
 function askClaude(userMsg){
-  history.push({role:'user',content:userMsg});
+  chatHistory.push({role:'user',content:userMsg});
   showTyping();
 
   var sys = selectedPlan==='premium' ? SYS_PREMIUM : SYS_FREE;
@@ -538,7 +538,7 @@ function askClaude(userMsg){
       'anthropic-version':'2023-06-01',
       'anthropic-dangerous-direct-browser-access':'true'
     },
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,system:sys,messages:history})
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,system:sys,messages:chatHistory})
   }).then(function(res){ return res.json(); }).then(function(data){
     hideTyping();
     if(data.error){
@@ -554,11 +554,11 @@ function askClaude(userMsg){
     var sm=raw.match(/\[\[STRATEGIES:(.*?)\]\]/s);
     if(sm){ try{ var s=JSON.parse(sm[1]); display=raw.replace(/\[\[STRATEGIES:.*?\]\]/s,'').trim(); setTimeout(function(){ renderStrategies(s); },400); }catch(e){} }
 
-    history.push({role:'assistant',content:raw});
+    chatHistory.push({role:'assistant',content:raw});
     if(display.trim()) maxSpeak(display.trim());
 
     // Afficher bannière upgrade en version gratuite après 3 échanges
-    if(selectedPlan==='free' && history.length>=6){
+    if(selectedPlan==='free' && chatHistory.length>=6){
       $('upgrade-banner').style.display='flex';
     }
 
@@ -662,7 +662,7 @@ function scanDoc(file){
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',max_tokens:300,
         system:(selectedPlan==='premium'?SYS_PREMIUM:SYS_FREE),
-        messages:[...history,{role:'user',content:[
+        messages:[...chatHistory,{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
           {type:'text',text:'L\'élève vient de scanner ce document. Lance le tri sélectif : demande-lui ce qu\'il reconnaît dedans, en 2 phrases max.'}
         ]}]
@@ -670,8 +670,8 @@ function scanDoc(file){
     }).then(function(r){ return r.json(); }).then(function(d){
       hideTyping();
       var txt=d.content&&d.content[0]?d.content[0].text:'Je vois le document. Qu\'est-ce que tu reconnais là-dedans ?';
-      history.push({role:'user',content:'[Document scanné]'});
-      history.push({role:'assistant',content:txt});
+      chatHistory.push({role:'user',content:'[Document scanné]'});
+      chatHistory.push({role:'assistant',content:txt});
       maxSpeak(txt);
     }).catch(function(){ hideTyping(); maxSpeak('Problème avec l\'image.'); });
   };
