@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(vercel dev:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(vercel env:*)",
+      "Bash(vercel:*)",
+      "Bash(supabase --version)",
+      "Bash(npx supabase:*)",
+      "Bash(curl:*)",
+      "mcp__glance__session_start",
+      "mcp__glance__browser_navigate",
+      "mcp__glance__browser_screenshot",
+      "mcp__glance__browser_click",
+      "mcp__glance__browser_type",
+      "mcp__glance__browser_console_messages"
+    ]
+  },
+  "spinnerTipsEnabled": false
+}
