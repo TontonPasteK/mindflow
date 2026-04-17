@@ -14,10 +14,26 @@ export default function ResetPassword() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
-    })
-    return () => subscription.unsubscribe()
+    // Supabase envoie le token dans le hash de l'URL
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.substring(1))
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      if (accessToken) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ error }) => {
+            if (!error) setReady(true)
+            else setError('Lien invalide ou expiré. Recommence la procédure.')
+          })
+      }
+    } else {
+      // Fallback : écoute l'événement PASSWORD_RECOVERY
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') setReady(true)
+      })
+      return () => subscription.unsubscribe()
+    }
   }, [])
 
   const handleSubmit = async () => {
@@ -63,7 +79,7 @@ export default function ResetPassword() {
             margin: '0 auto 12px',
           }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"
+              <path d="M12 2C6.48 2 2 06.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"
                 fill="#080D0A"/>
             </svg>
           </div>
@@ -75,10 +91,20 @@ export default function ResetPassword() {
           </p>
         </div>
 
-        {!ready && !done && (
+        {!ready && !done && !error && (
           <p style={{ textAlign: 'center', color: 'var(--text-2)', fontSize: '14px' }}>
             Vérification du lien en cours...
           </p>
+        )}
+
+        {error && !done && (
+          <p style={{
+            fontSize: '13px', color: 'var(--error)',
+            padding: '10px 14px',
+            background: 'var(--error-dim)',
+            borderRadius: 'var(--r-sm)',
+            textAlign: 'center',
+          }}>{error}</p>
         )}
 
         {ready && !done && (
