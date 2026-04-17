@@ -1,21 +1,17 @@
 /**
  * Vercel Serverless Function — /api/chat
- * Routes requests to Anthropic Claude with basic rate limiting.
+ * Routes requests to Groq (temporaire) avec basic rate limiting.
  *
  * POST body: { systemPrompt, messages, model? }
  *   - messages: [{role, content}]  (content can be a string or vision array)
  */
 
 // ─── Rate limiting (in-memory, per Vercel instance) ──────────────────────────
-// Resets on cold starts — sufficient as basic abuse protection.
-// For cross-instance persistence, swap for Upstash Redis / Vercel KV.
-
-const RATE_LIMIT_MAX    = 20           // max requests
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000  // 1 hour in ms
-const rateLimitStore    = new Map()    // identifier → { count, resetAt }
+const RATE_LIMIT_MAX    = 20
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000
+const rateLimitStore    = new Map()
 
 function getIdentifier(req) {
-  // Prefer real IP forwarded by Vercel's edge
   const forwarded = req.headers['x-forwarded-for']
   if (forwarded) return forwarded.split(',')[0].trim()
   return req.headers['x-real-ip'] || 'unknown'
@@ -39,7 +35,6 @@ function checkRateLimit(identifier) {
   return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count }
 }
 
-// Evict expired entries periodically to avoid unbounded memory growth
 function evictExpired() {
   const now = Date.now()
   for (const [key, entry] of rateLimitStore) {
@@ -57,7 +52,6 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  // ── Rate limit check ────────────────────────────────────────────────────────
   evictExpired()
   const identifier = getIdentifier(req)
   const { allowed, remaining, waitMinutes } = checkRateLimit(identifier)
@@ -71,7 +65,6 @@ export default async function handler(req, res) {
     })
   }
 
-  // ── Parse body ──────────────────────────────────────────────────────────────
   let body
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
@@ -85,23 +78,19 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing systemPrompt or messages' })
   }
 
-  // Pass content as-is — can be a string or a vision content array
+  // Groq n'accepte pas les content arrays (vision) — on convertit en string
   const cleanMessages = messages.map(m => ({
     role:    m.role,
-    content: m.content,
+    content: Array.isArray(m.content)
+      ? m.content.filter(b => b.type === 'text').map(b => b.text).join('\n')
+      : m.content,
   }))
 
-  // Detect PDF to add the required Anthropic beta header
-  const hasPDF = cleanMessages.some(m =>
-    Array.isArray(m.content) &&
-    m.content.some(b => b.type === 'document' && b.source?.media_type === 'application/pdf')
-  )
-
-  const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim()
+  const apiKey = (process.env.GROQ_API_KEY || '').trim()
 
   try {
-    if (wantStream) return await callClaudeStream(systemPrompt, cleanMessages, apiKey, hasPDF, res)
-    const content = await callClaude(systemPrompt, cleanMessages, apiKey, hasPDF)
+    if (wantStream) return await callGroqStream(systemPrompt, cleanMessages, apiKey, res)
+    const content = await callGroq(systemPrompt, cleanMessages, apiKey)
     return res.status(200).json({ content })
   } catch (err) {
     console.error('[chat API] error:', err.message)
@@ -109,63 +98,59 @@ export default async function handler(req, res) {
   }
 }
 
-// ─── Anthropic Claude ─────────────────────────────────────────────────────────
+// ─── Groq (non-streaming) ─────────────────────────────────────────────────────
 
-async function callClaude(systemPrompt, messages, apiKey, hasPDF = false) {
-  const headers = {
-    'Content-Type':    'application/json',
-    'x-api-key':       apiKey,
-    'anthropic-version': '2023-06-01',
-  }
-  if (hasPDF) headers['anthropic-beta'] = 'pdfs-2024-09-25'
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+async function callGroq(systemPrompt, messages, apiKey) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      model:      'claude-sonnet-4-20250514',
+      model:      'llama-3.3-70b-versatile',
       max_tokens: 1024,
-      system:     systemPrompt,
-      messages,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
     }),
   })
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
-    throw new Error(err.error?.message || `Anthropic error ${response.status}`)
+    throw new Error(err.error?.message || `Groq error ${response.status}`)
   }
 
   const data = await response.json()
-  return data.content?.[0]?.text || ''
+  return data.choices?.[0]?.message?.content || ''
 }
 
-// ─── Streaming: SSE proxy from Anthropic to client ───────────────────────────
+// ─── Groq (streaming) ────────────────────────────────────────────────────────
 
-async function callClaudeStream(systemPrompt, messages, apiKey, hasPDF, res) {
-  const headers = {
-    'Content-Type':      'application/json',
-    'x-api-key':         apiKey,
-    'anthropic-version': '2023-06-01',
-  }
-  if (hasPDF) headers['anthropic-beta'] = 'pdfs-2024-09-25'
-
-  const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+async function callGroqStream(systemPrompt, messages, apiKey, res) {
+  const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      model:      'claude-sonnet-4-20250514',
+      model:      'llama-3.3-70b-versatile',
       max_tokens: 1024,
       stream:     true,
-      system:     systemPrompt,
-      messages,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
     }),
   })
 
-  if (!anthropicRes.ok) {
-    const err = await anthropicRes.json().catch(() => ({}))
+  if (!groqRes.ok) {
+    const err = await groqRes.json().catch(() => ({}))
     res.setHeader('Content-Type', 'application/json')
-    return res.status(anthropicRes.status).json({
-      error: err.error?.message || `Anthropic error ${anthropicRes.status}`,
+    return res.status(groqRes.status).json({
+      error: err.error?.message || `Groq error ${groqRes.status}`,
     })
   }
 
@@ -173,7 +158,7 @@ async function callClaudeStream(systemPrompt, messages, apiKey, hasPDF, res) {
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection',    'keep-alive')
 
-  const reader = anthropicRes.body.getReader()
+  const reader = groqRes.body.getReader()
   const dec    = new TextDecoder()
   let   buf    = ''
 
@@ -186,20 +171,17 @@ async function callClaudeStream(systemPrompt, messages, apiKey, hasPDF, res) {
       buf = lines.pop() ?? ''
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6)
+        if (raw === '[DONE]') { res.write('data: [DONE]\n\n'); continue }
         let ev
-        try { ev = JSON.parse(line.slice(6)) } catch { continue }
-        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-          res.write(`data: ${JSON.stringify({ t: ev.delta.text })}\n\n`)
-        } else if (ev.type === 'message_stop') {
-          res.write('data: [DONE]\n\n')
-        } else if (ev.type === 'error') {
-          res.write(`data: ${JSON.stringify({ error: ev.error?.message || 'Stream error' })}\n\n`)
-          res.end(); return
-        }
+        try { ev = JSON.parse(raw) } catch { continue }
+        const text = ev.choices?.[0]?.delta?.content
+        if (text) res.write(`data: ${JSON.stringify({ t: text })}\n\n`)
+        if (ev.choices?.[0]?.finish_reason === 'stop') res.write('data: [DONE]\n\n')
       }
     }
   } catch (e) {
-    console.error('[chat stream]', e.message)
+    console.error('[groq stream]', e.message)
   }
   res.end()
 }
