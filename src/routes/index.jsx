@@ -4,14 +4,15 @@ import PublicRoute from './PublicRoute'
 import ProtectedRoute from './ProtectedRoute'
 import { useAuth } from '../context/AuthContext'
 
-import Landing       from '../pages/Landing'
-import Auth          from '../pages/Auth'
-import Choice        from '../pages/Choice'
-import Onboarding    from '../pages/Onboarding'
-import Session       from '../pages/Session'
+import Landing         from '../pages/Landing'
+import Auth            from '../pages/Auth'
+import Choice          from '../pages/Choice'
+import Onboarding      from '../pages/Onboarding'
+import Session         from '../pages/Session'
 import ParentDashboard from '../pages/ParentDashboard'
-import Pricing       from '../pages/Pricing'
-import Settings      from '../pages/Settings'
+import Pricing         from '../pages/Pricing'
+import Settings        from '../pages/Settings'
+import ResetPassword   from '../pages/ResetPassword'
 
 export default function AppRoutes() {
   return (
@@ -19,6 +20,7 @@ export default function AppRoutes() {
       {/* Public */}
       <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/pricing" element={<Pricing />} />
 
       {/* Protected */}
@@ -36,13 +38,10 @@ export default function AppRoutes() {
   )
 }
 
-// Success page after Lemon Squeezy payment
-// Note: webhook updates plan async — we poll AuthContext until isPremium is true.
 function SuccessPage() {
   const { isPremium, refreshProfile } = useAuth()
   const navigate = useNavigate()
 
-  // Poll every 3s (up to 30s) waiting for the webhook to set plan='premium'
   useEffect(() => {
     if (isPremium) return
     let attempts = 0

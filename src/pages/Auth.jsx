@@ -11,7 +11,7 @@ export default function Auth() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [globalError, setGlobalError] = useState('')
-  const [resetSent, setResetSent]     = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -24,7 +24,7 @@ export default function Auth() {
     setGlobalError('')
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
-        redirectTo: `${window.location.origin}/auth?mode=login`,
+        redirectTo: `${window.location.origin}/reset-password`,
       })
       if (error) throw error
       setResetSent(true)
