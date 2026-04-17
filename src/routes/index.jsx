@@ -8,6 +8,7 @@ import Landing         from '../pages/Landing'
 import Auth            from '../pages/Auth'
 import Choice          from '../pages/Choice'
 import Onboarding      from '../pages/Onboarding'
+import DrMind          from '../pages/DrMind'
 import Session         from '../pages/Session'
 import ParentDashboard from '../pages/ParentDashboard'
 import Pricing         from '../pages/Pricing'
@@ -26,6 +27,7 @@ export default function AppRoutes() {
       {/* Protected */}
       <Route path="/choice"     element={<ProtectedRoute><Choice /></ProtectedRoute>} />
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/drMind"     element={<ProtectedRoute><DrMind /></ProtectedRoute>} />
       <Route path="/session"    element={<ProtectedRoute><Session /></ProtectedRoute>} />
       <Route path="/parent"     element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
       <Route path="/settings"   element={<ProtectedRoute><Settings /></ProtectedRoute>} />
@@ -69,7 +71,7 @@ function SuccessPage() {
         Bienvenue dans Premium !
       </h1>
       <p style={{ color: 'var(--text-2)', maxWidth: '380px' }}>
-        Maya connaît maintenant ton profil cognitif et va adapter chaque session pour toi.
+        Dr Mind va d'abord découvrir comment tu penses. Ça prend 20 minutes et ça change tout.
       </p>
       {!isPremium && (
         <p style={{ color: 'var(--text-3)', fontSize: '13px' }}>
@@ -77,11 +79,11 @@ function SuccessPage() {
         </p>
       )}
       <button
-        onClick={() => navigate('/session?mode=premium')}
+        onClick={() => navigate('/drMind?seance=1')}
         style={{
           padding: '14px 32px',
-          background: 'var(--accent)',
-          color: '#080D0A',
+          background: '#6C63FF',
+          color: 'white',
           borderRadius: '14px',
           fontWeight: '700',
           fontSize: '15px',
@@ -89,7 +91,7 @@ function SuccessPage() {
           cursor: 'pointer',
         }}
       >
-        Commencer ma première session
+        Rencontrer Dr Mind →
       </button>
     </div>
   )

@@ -1,18 +1,26 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 import PlanBadge from '../components/ui/PlanBadge'
 
 export default function Choice() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const drMindSeance1Done = searchParams.get('drMind') === 'seance1'
   const { user, isPremium, profile } = useAuth()
 
   const handleFree = () => navigate('/session?mode=free')
+
   const handlePremium = () => {
     if (isPremium) {
-      // If profile not complete, go to onboarding first
       if (!profile?.onboarding_complete) {
-        navigate('/onboarding')
+        // Séance 1 faite mais pas séance 2 → proposer séance 2
+        const seanceDrMind = profile?.seance_drMind ?? 0
+        if (seanceDrMind >= 1) {
+          navigate('/drMind?seance=2')
+        } else {
+          navigate('/drMind?seance=1')
+        }
       } else {
         navigate('/session?mode=premium')
       }
@@ -20,6 +28,11 @@ export default function Choice() {
       navigate('/pricing')
     }
   }
+
+  // Message d'incitation après séance 1
+  const incitationMsg = drMindSeance1Done
+    ? 'Ton profil est à 50%. Plus vite tu fais la séance 2, plus ton assistant sera précis pour toi.'
+    : null
 
   return (
     <div style={{
@@ -73,9 +86,42 @@ export default function Choice() {
           Salut {user?.prenom} ! C'est quoi ce soir ?
         </h1>
         <p style={{ color: 'var(--text-2)', fontSize: '16px' }}>
-          Choisis comment tu veux travailler avec Maya
+          Choisis comment tu veux travailler
         </p>
       </div>
+
+      {/* Bandeau incitation séance 2 */}
+      {incitationMsg && (
+        <div
+          onClick={handlePremium}
+          style={{
+            width: '100%',
+            maxWidth: '680px',
+            padding: '14px 20px',
+            background: 'rgba(108,99,255,0.12)',
+            border: '1px solid rgba(108,99,255,0.3)',
+            borderRadius: 'var(--r-md)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'fade-up 0.4s ease',
+          }}
+        >
+          <span style={{ fontSize: '24px' }}>🧠</span>
+          <div>
+            <p style={{ fontSize: '13px', fontWeight: '600', color: '#6C63FF', margin: 0 }}>
+              Complète ton profil cognitif
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--text-2)', margin: '2px 0 0' }}>
+              {incitationMsg}
+            </p>
+          </div>
+          <span style={{ marginLeft: 'auto', color: '#6C63FF', fontSize: '14px', fontWeight: '600' }}>
+            Séance 2 →
+          </span>
+        </div>
+      )}
 
       <div style={{
         display: 'grid',
@@ -100,11 +146,21 @@ export default function Choice() {
         <ChoiceCard
           emoji="🚀"
           title="Je veux de meilleures notes et bosser moins longtemps"
-          desc="Maya apprend comment tu penses et adapte chaque explication pour toi."
+          desc={
+            isPremium && !profile?.onboarding_complete
+              ? "Dr Mind va d'abord découvrir comment tu penses. Ça change tout."
+              : "Ton assistant adapte chaque explication à ta façon de penser."
+          }
           tag={isPremium ? '★ Premium' : '★ Premium · 19€/mois'}
           tagColor="var(--accent)"
           onClick={handlePremium}
-          cta={isPremium ? 'Session Premium →' : 'Découvrir →'}
+          cta={
+            isPremium && !profile?.onboarding_complete
+              ? 'Rencontrer Dr Mind →'
+              : isPremium
+              ? 'Session Premium →'
+              : 'Découvrir →'
+          }
           highlighted
         />
       </div>

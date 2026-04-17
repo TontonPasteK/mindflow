@@ -1,17 +1,17 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useSession } from '../context/SessionContext'
-import { buildPremiumPrompt, buildFreePrompt } from '../services/prompts'
+import { buildPremiumPrompt, buildFreePrompt, buildDrMindPrompt } from '../services/prompts'
 import { upsertProfile, addVictory, getLastSession } from '../services/supabase'
 
-const MAX_HISTORY = 20  // keep last N messages for context
+const MAX_HISTORY = 20
 
-// Parse special tags from AI response
 function parseTags(content) {
   let text = content
   let profileData = null
   let strategies = null
   let victory = null
+  let notifyParents = null
 
   // [[PROFILE:{...}]]
   const profileMatch = text.match(/\[\[PROFILE:(\{.*?\})\]\]/s)
@@ -34,10 +34,17 @@ function parseTags(content) {
     text = text.replace(victoryMatch[0], '').trim()
   }
 
-  return { text, profileData, strategies, victory }
+  // [[NOTIFY_PARENTS:{...}]]
+  const notifyMatch = text.match(/\[\[NOTIFY_PARENTS:(\{.*?\})\]\]/s)
+  if (notifyMatch) {
+    try { notifyParents = JSON.parse(notifyMatch[1]) } catch {}
+    text = text.replace(notifyMatch[0], '').trim()
+  }
+
+  return { text, profileData, strategies, victory, notifyParents }
 }
 
-export function useChat({ onProfile, onVictory, onTTS }) {
+export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance = 1 }) {
   const { user, profile, isPremium, refreshProfile } = useAuth()
   const { sessionId, addExchange, addMatiere, persistMessage } = useSession()
 
@@ -45,22 +52,22 @@ export function useChat({ onProfile, onVictory, onTTS }) {
   const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState(null)
   const [retryStatus, setRetryStatus] = useState(null)
-  const historyRef                = useRef([])  // raw {role, content} for API
+  const historyRef                = useRef([])
   const initRef                   = useRef(false)
   const onTTSRef                  = useRef(onTTS)
-  onTTSRef.current                = onTTS  // always points to latest callback
+  onTTSRef.current                = onTTS
 
-  // Build system prompt
   const buildSystemPrompt = useCallback(async () => {
+    if (mode === 'drMind') {
+      return buildDrMindPrompt(user, seance)
+    }
     if (isPremium) {
       const lastSession = await getLastSession(user.id).catch(() => null)
       return buildPremiumPrompt(user, profile, lastSession)
     }
     return buildFreePrompt(user)
-  }, [isPremium, user, profile])
+  }, [mode, seance, isPremium, user, profile])
 
-  // Add a message to UI state only (history managed explicitly)
-  // Accepts an optional pre-generated id in extras (used when TTS is fired before addMessage)
   const addMessage = useCallback((role, content, extras = {}) => {
     const { id: preId, ...rest } = extras
     const msg = { id: preId ?? (Date.now() + Math.random()), role, content, ...rest }
@@ -68,7 +75,6 @@ export function useChat({ onProfile, onVictory, onTTS }) {
     return msg
   }, [])
 
-  // Initialise the session with Maya's greeting
   const initChat = useCallback(async () => {
     if (initRef.current) return
     initRef.current = true
@@ -76,20 +82,26 @@ export function useChat({ onProfile, onVictory, onTTS }) {
 
     try {
       const systemPrompt = await buildSystemPrompt()
-      const greeting = isPremium
-        ? `Hey ${user?.prenom || ''} ! Content de te voir. C'est quoi au programme ce soir ?`
-        : `Salut ${user?.prenom || ''} ! Je suis Maya. T'as quoi comme devoirs ce soir ?`
 
-      if (isPremium) {
-        // Seed history with the init exchange
-        const initMsg = { role: 'user', content: 'Bonjour Maya !' }
+      // Greeting selon le mode
+      let greeting
+      if (mode === 'drMind') {
+        greeting = seance === 1
+          ? `Bonjour ${user?.prenom || ''} ! Moi c'est Dr Mind. Avant que tu rencontres ton assistant personnel, j'ai besoin de comprendre comment TOI tu fonctionnes — parce que tout le monde pense différemment. On va passer environ 20 minutes ensemble aujourd'hui. Pas de bonnes ou mauvaises réponses — juste ce qui se passe vraiment dans ta tête. On commence ?`
+          : `Bon retour ${user?.prenom || ''} ! La dernière fois on a bien avancé. Avant de continuer — qu'est-ce qui te revient de ce qu'on a fait ensemble ?`
+      } else if (isPremium) {
+        greeting = `Hey ${user?.prenom || ''} ! Content de te voir. C'est quoi au programme ce soir ?`
+      } else {
+        greeting = `Salut ${user?.prenom || ''} ! Je suis Maya. T'as quoi comme devoirs ce soir ?`
+      }
+
+      if (isPremium || mode === 'drMind') {
+        const initMsg = { role: 'user', content: mode === 'drMind' ? 'Bonjour Dr Mind !' : 'Bonjour Maya !' }
         historyRef.current = [initMsg]
 
-        // Pre-generate msgId so TTS can reference it before addMessage
         const msgId = Date.now() + Math.random()
         let earlyTtsSentence = null
 
-        // Retry automatique si l'API est surchargée (jusqu'à 3 fois, 3s d'attente)
         let rawText
         for (let attempt = 1; attempt <= 4; attempt++) {
           try {
@@ -101,7 +113,7 @@ export function useChat({ onProfile, onVictory, onTTS }) {
             break
           } catch (err) {
             if (attempt <= 3 && err.message?.includes('Overloaded')) {
-              setRetryStatus('Maya réfléchit...')
+              setRetryStatus('Dr Mind réfléchit...')
               await new Promise(r => setTimeout(r, 3000))
             } else {
               throw err
@@ -113,7 +125,6 @@ export function useChat({ onProfile, onVictory, onTTS }) {
         const greetMsg = addMessage('assistant', text, { strategies, id: msgId })
         historyRef.current = [...historyRef.current, { role: 'assistant', content: text }]
 
-        // Queue remaining sentences for TTS (after the first sentence already fired)
         if (earlyTtsSentence !== null) {
           const firstMatch = text.match(/^(.{15,}?[.!?])\s/)
           const remainder = firstMatch ? text.slice(firstMatch[0].length).trim() : ''
@@ -122,28 +133,27 @@ export function useChat({ onProfile, onVictory, onTTS }) {
           if (onTTSRef.current) onTTSRef.current(text, greetMsg.id)
         }
       } else {
-        // Free: greet locally, history starts empty (first user msg will be first)
         addMessage('assistant', greeting)
         if (onTTSRef.current) onTTSRef.current(greeting)
       }
     } catch (err) {
       console.error('initChat error:', err)
-      addMessage('assistant', `Salut ! Je suis Maya, ta compagne de devoirs. C'est quoi au programme ce soir ?`)
+      const fallback = mode === 'drMind'
+        ? `Bonjour ! Je suis Dr Mind. On va découvrir ensemble comment tu apprends le mieux. On commence ?`
+        : `Salut ! Je suis Maya. C'est quoi au programme ce soir ?`
+      addMessage('assistant', fallback)
     } finally {
       setRetryStatus(null)
       setLoading(false)
     }
-  }, [isPremium, user, profile, buildSystemPrompt, addMessage])
+  }, [isPremium, mode, seance, user, profile, buildSystemPrompt, addMessage])
 
-  // Send a user message and get AI response
-  // fileData = { base64: string, mimeType: string } for vision/document attachments
   const sendMessage = useCallback(async (content, fileData = null) => {
     const hasText = content && content.trim()
     if (!hasText && !fileData) return
     if (loading) return
     setError(null)
 
-    // Label shown in the chat bubble
     const displayText = hasText
       ? content.trim()
       : fileData?.mimeType === 'application/pdf' ? 'PDF joint' : 'Image jointe'
@@ -159,7 +169,6 @@ export function useChat({ onProfile, onVictory, onTTS }) {
     try {
       const systemPrompt = await buildSystemPrompt()
 
-      // Build the API-facing content (string or vision content array)
       let apiContent
       if (fileData) {
         const blocks = []
@@ -174,10 +183,8 @@ export function useChat({ onProfile, onVictory, onTTS }) {
         apiContent = content.trim()
       }
 
-      // Add to history with full vision content for this request
       historyRef.current = [...historyRef.current, { role: 'user', content: apiContent }].slice(-MAX_HISTORY)
 
-      // Pre-generate msgId so TTS can reference it before addMessage
       const msgId = Date.now() + Math.random()
       let earlyTtsSentence = null
 
@@ -186,20 +193,19 @@ export function useChat({ onProfile, onVictory, onTTS }) {
         if (onTTSRef.current) onTTSRef.current(sentence, msgId)
       })
 
-      // Replace the base64 blob in history with a compact text ref (avoid bloating future calls)
       if (fileData) {
         const ref = (fileData.mimeType === 'application/pdf' ? '[PDF envoyé]' : '[Image envoyée]') +
           (hasText ? ` — "${content.trim()}"` : '')
         historyRef.current[historyRef.current.length - 1] = { role: 'user', content: ref }
       }
-      const { text, profileData, strategies, victory } = parseTags(rawResponse)
 
-      // Add AI message to UI + history
+      const { text, profileData, strategies, victory, notifyParents } = parseTags(rawResponse)
+
       const assistantMsg = addMessage('assistant', text, { strategies, id: msgId })
       historyRef.current = [...historyRef.current, { role: 'assistant', content: text }].slice(-MAX_HISTORY)
       await persistMessage('assistant', text)
 
-      // Handle profile detection
+      // Profil détecté — enregistrement
       if (profileData && onProfile) {
         await upsertProfile(user.id, {
           visuel: profileData.visuel,
@@ -208,22 +214,31 @@ export function useChat({ onProfile, onVictory, onTTS }) {
           projet_de_sens: profileData.projet_de_sens,
           intelligence_dominante: profileData.intelligence,
           passions: profileData.passions,
-          onboarding_complete: true,
+          onboarding_complete: profileData.onboarding_complete ?? false,
+          avatar: assignAvatar(profileData),
         })
         await refreshProfile()
         onProfile(profileData)
       }
 
-      // Handle victory
+      // Notification parents
+      if (notifyParents) {
+        console.log('[DrMind] Notify parents:', notifyParents)
+        // TODO Phase 2 : déclencher email via Supabase Edge Function
+      }
+
+      // Victoire
       if (victory && onVictory && sessionId) {
         const v = await addVictory(user.id, sessionId, victory)
         onVictory(v)
       }
 
-      // Detect matiere from conversation (simple heuristic)
-      detectMatiere(content + ' ' + text, addMatiere)
+      // Détection matière (sessions normales uniquement)
+      if (mode !== 'drMind') {
+        detectMatiere(content + ' ' + text, addMatiere)
+      }
 
-      // TTS — queue remaining sentences after the first (already fired during stream)
+      // TTS
       if (earlyTtsSentence !== null) {
         const firstMatch = text.match(/^(.{15,}?[.!?])\s/)
         const remainder = firstMatch ? text.slice(firstMatch[0].length).trim() : ''
@@ -234,18 +249,38 @@ export function useChat({ onProfile, onVictory, onTTS }) {
 
     } catch (err) {
       console.error('sendMessage error:', err)
-      // Show the API error message directly (e.g. rate limit message), fallback to generic
       setError(err.message?.startsWith('Limite') ? err.message : 'Oups, j\'ai eu un problème. Réessaie !')
     } finally {
       setLoading(false)
     }
-  }, [loading, addMessage, addExchange, persistMessage, buildSystemPrompt, user, sessionId, onProfile, onVictory, refreshProfile, addMatiere])
+  }, [loading, addMessage, addExchange, persistMessage, buildSystemPrompt, user, sessionId, onProfile, onVictory, refreshProfile, addMatiere, mode])
 
   return { messages, loading, error, retryStatus, sendMessage, initChat }
 }
 
-// ─── Streaming API call — fires onFirstSentence as soon as a sentence is ready ─
+// ─── Attribution automatique de l'avatar selon le profil ─────────────────────
+function assignAvatar(profileData) {
+  const v = profileData.visuel ?? 0
+  const a = profileData.auditif ?? 0
+  const k = profileData.kinesthesique ?? 0
+  const total = v + a + k
+  if (total === 0) return 'Maya'
 
+  const vp = v / total
+  const ap = a / total
+  const kp = k / total
+  const threshold = 0.5
+
+  if (vp >= threshold) return 'Max'
+  if (ap >= threshold) return 'Victor'
+  if (kp >= threshold) return 'Léo'
+  if (vp >= 0.35 && ap >= 0.35) return 'Maya'
+  if (vp >= 0.35 && kp >= 0.35) return 'Noa'
+  if (ap >= 0.35 && kp >= 0.35) return 'Sam'
+  return 'Alex'
+}
+
+// ─── Streaming API ────────────────────────────────────────────────────────────
 async function callAIStream(systemPrompt, messages, onFirstSentence) {
   const response = await fetch('/api/chat', {
     method: 'POST',
@@ -276,8 +311,6 @@ async function callAIStream(systemPrompt, messages, onFirstSentence) {
       if (ev.error) throw new Error(ev.error)
       if (ev.t) {
         text += ev.t
-        // Fire TTS on first complete sentence (≥15 chars, ends .!?, followed by space)
-        // Skip if a [[TAG]] is open — tags are stripped by TTS.speak() but we avoid partial ones
         if (!fired) {
           const m = text.match(/^(.{15,}?[.!?])\s/)
           if (m && !m[1].includes('[[')) {
@@ -292,8 +325,7 @@ async function callAIStream(systemPrompt, messages, onFirstSentence) {
   return text
 }
 
-// ─── Simple matière detection ─────────────────────────────────────────────────
-
+// ─── Détection matière ────────────────────────────────────────────────────────
 const MATIERES = {
   'maths': ['maths', 'math', 'équation', 'calcul', 'géométrie', 'algèbre', 'fraction'],
   'français': ['français', 'rédaction', 'grammaire', 'conjugaison', 'orthographe', 'lecture', 'poème', 'texte'],
