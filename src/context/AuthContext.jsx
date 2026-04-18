@@ -4,14 +4,13 @@ import { supabase, getUser, getProfile } from '../services/supabase'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [authUser, setAuthUser]     = useState(null)  // Supabase auth user
-  const [user, setUser]             = useState(null)  // public.users row
-  const [profile, setProfile]       = useState(null)  // public.profiles row
+  const [authUser, setAuthUser]     = useState(null)
+  const [user, setUser]             = useState(null)
+  const [profile, setProfile]       = useState(null)
   const [loading, setLoading]         = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const loadUserData = useCallback(async (authUid) => {
-    // Retry once after 1s to handle async DB trigger on first signup
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [userResult, profileResult] = await Promise.allSettled([
@@ -23,18 +22,17 @@ export function AuthProvider({ children }) {
           const userData = userResult.value
           setUser(userData)
           setProfile(profileResult.status === 'fulfilled' ? profileResult.value : null)
-          // ← diagnostic log visible in browser console after every login
           console.log('[Auth] user chargé:', userData?.email, '| plan:', userData?.plan, '| isPremium:', userData?.plan === 'premium')
+          console.log('[Auth] profile:', profileResult.status === 'fulfilled' ? JSON.stringify(profileResult.value) : 'FAILED - ' + profileResult.reason?.message)
           if (profileResult.status === 'rejected') {
-            console.warn('[Auth] getProfile failed (non-blocking):', profileResult.reason?.message, profileResult.reason?.code)
+            console.warn('[Auth] getProfile failed:', profileResult.reason?.message, profileResult.reason?.code)
           }
           return
         }
 
-        // getUser itself failed — retry
         throw userResult.reason
       } catch (err) {
-        console.error(`[Auth] loadUserData attempt ${attempt + 1} failed — code:`, err.code, '| msg:', err.message)
+        console.error(`[Auth] loadUserData attempt ${attempt + 1} failed:`, err.code, err.message)
         if (attempt === 0) {
           await new Promise(r => setTimeout(r, 1000))
         }
@@ -45,8 +43,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
-    // Supabase v2 canonical pattern: onAuthStateChange fires INITIAL_SESSION
-    // on mount, replacing the need for a separate getSession() call.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (!mounted) return
@@ -62,7 +58,6 @@ export function AuthProvider({ children }) {
       }
     )
 
-    // Safety net: never stay stuck on loading more than 5s
     const timeout = setTimeout(() => {
       if (mounted) setLoading(false)
     }, 5000)
