@@ -15,7 +15,6 @@ import PomodoroTimer  from '../components/session/PomodoroTimer'
 import DocumentScanner from '../components/session/DocumentScanner'
 import UpgradeBanner  from '../components/session/UpgradeBanner'
 import VictoryModal   from '../components/session/VictoryModal'
-import Button         from '../components/ui/Button'
 
 export default function Session() {
   const [params] = useSearchParams()
@@ -26,24 +25,29 @@ export default function Session() {
   const mode = params.get('mode') || (isPremium ? 'premium' : 'free')
   const isSessionPremium = mode === 'premium' && isPremium
 
+  // Nom du personnage selon le mode
+  const avatarName = isSessionPremium ? (profile?.avatar || 'Maya') : 'Dr Mind'
+
+  // Modal choix parler/taper
+  const [inputMode, setInputMode] = useState(null) // null = pas encore choisi
   const [voiceMode, setVoiceMode]     = useState(false)
   const [sessionReady, setSessionReady] = useState(false)
   const [newVictory, setNewVictory]   = useState(null)
   const [permissionRequested, setPermissionRequested] = useState(false)
   const [speakingMessageId, setSpeakingMessageId] = useState(null)
-  const [userPaused, setUserPaused]   = useState(false)  // ← CORRECTION : pause volontaire
+  const [userPaused, setUserPaused]   = useState(false)
+  const [ttsEnabled, setTtsEnabled]   = useState(false)
   const initRanRef                    = useRef(false)
 
-  // TTS — only for premium
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
-    enabled: isSessionPremium,
+    enabled: ttsEnabled,
     onPlayStart: (msgId) => setSpeakingMessageId(msgId),
   })
 
   // Chat hook
   const { messages, loading, error, retryStatus, sendMessage, initChat } = useChat({
     onVictory: setNewVictory,
-    onTTS: isSessionPremium ? (text, msgId) => speak(text, msgId) : null,
+    onTTS: null,
     onProfile: null,
   })
 
@@ -52,14 +56,12 @@ export default function Session() {
     useVoice({
       onTranscript: (text) => {
         stopListening()
-        setUserPaused(false)  // ← après envoi, on réactive l'auto-listen
+        setUserPaused(false)
         sendMessage(text)
       },
     })
 
-  console.log('[MIC]', { voiceMode, permissionGranted, isSessionPremium, isSpeaking, isListening })
-
-  // ── Init ────────────────────────────────────────────────
+  // ── Init session ────────────────────────────────────────
   useEffect(() => {
     if (!user || initRanRef.current) return
     initRanRef.current = true
@@ -70,7 +72,6 @@ export default function Session() {
       } catch (err) {
         console.warn('[Session] startSession failed (non-blocking):', err.message)
       }
-
       setSessionReady(true)
     }
     init()
@@ -78,31 +79,25 @@ export default function Session() {
     return () => { stopTTS() }
   }, [user])
 
-  // ── Permission micro ────────────────────────────────────
+  // ── Démarrage chat une fois le mode choisi et session prête ─
   useEffect(() => {
-    console.log('[Session] permission effect → isSessionPremium:', isSessionPremium, '| permissionRequested:', permissionRequested)
-    if (!isSessionPremium || permissionRequested) return
-    setPermissionRequested(true)
-    requestPermission().catch(() => false).then(granted => {
-      console.log('[Session] requestPermission result:', granted, '| setVoiceMode:', granted)
-      if (granted) setVoiceMode(true)
-    })
-  }, [isSessionPremium, permissionRequested, requestPermission])
+    if (sessionReady && inputMode !== null) initChat()
+  }, [sessionReady, inputMode, initChat])
 
+  // ── Micro en mode parler ─────────────────────────────────
   useEffect(() => {
-    if (sessionReady) initChat()
-  }, [sessionReady, initChat])
+    if (inputMode === 'voice' && !permissionRequested) {
+      setPermissionRequested(true)
+      requestPermission().then(granted => {
+        if (granted) setVoiceMode(true)
+      })
+    }
+  }, [inputMode, permissionRequested, requestPermission])
 
-  // Stop listening while Max speaks
-  useEffect(() => {
-    if (isSpeaking && isListening) stopListening()
-  }, [isSpeaking, isListening, stopListening])
-
-  // Ref to latest startListening
+  // Auto-listen en mode parler
   const startListeningRef = useRef(startListening)
   useEffect(() => { startListeningRef.current = startListening }, [startListening])
 
-  // Auto-listen: ne redémarre pas si l'utilisateur a mis en pause volontairement
   useEffect(() => {
     if (voiceMode && !isListening && !isSpeaking && !loading && permissionGranted && sessionReady && !userPaused) {
       const timer = setTimeout(() => startListeningRef.current(), 400)
@@ -110,43 +105,126 @@ export default function Session() {
     }
   }, [isListening, isSpeaking, voiceMode, loading, permissionGranted, sessionReady, userPaused])
 
-  // ── Document / file attachment ──────────────────────────
+  // ── Document scan ────────────────────────────────────────
   const handleScan = useCallback((base64, mimeType) => {
     sendMessage('', { base64, mimeType })
   }, [sendMessage])
 
-  // ── Session end ─────────────────────────────────────────
+  // ── Fin de session ───────────────────────────────────────
   const handleEndSession = useCallback(async () => {
     const lastMessage = messages.findLast(m => m.role === 'assistant')
     await closeSession({ resume: lastMessage?.content?.substring(0, 200) })
     navigate('/choice')
   }, [closeSession, navigate, messages])
 
-  const toggleVoice = () => {
-    if (!voiceMode && !permissionGranted) {
-      requestPermission().then(granted => {
-        if (granted) setVoiceMode(true)
-      })
-    } else {
-      if (voiceMode && isListening) stopListening()
-      setVoiceMode(v => !v)
-    }
-  }
-
-  // ── Gestionnaire bouton pause ────────────────────────────
   const handleVoiceButton = () => {
     if (isSpeaking) {
       stopTTS()
-      setUserPaused(true)   // ← bloque l'auto-listen
+      setUserPaused(true)
     } else if (isListening) {
       stopListening()
-      setUserPaused(true)   // ← bloque l'auto-listen
+      setUserPaused(true)
     } else {
-      setUserPaused(false)  // ← réactive l'auto-listen
+      setUserPaused(false)
       startListening()
     }
   }
 
+  // ── Modal choix parler/taper ─────────────────────────────
+  if (inputMode === null) {
+    return (
+      <div style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+        padding: '32px 24px',
+        gap: '24px',
+      }}>
+        <MaxAvatar isSpeaking={false} size={88} profile={profile?.intelligence_dominante ?? null} />
+
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>
+            Comment tu veux travailler ?
+          </div>
+          <div style={{ fontSize: '14px', color: 'var(--text-3)' }}>
+            Tu pourras changer à tout moment pendant la session.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '16px', width: '100%', maxWidth: '360px' }}>
+          {/* Bouton Écrire */}
+          <button
+            onClick={() => setInputMode('text')}
+            style={{
+              flex: 1,
+              padding: '20px 16px',
+              borderRadius: '16px',
+              background: 'var(--bg-card)',
+              border: '2px solid var(--border)',
+              color: 'var(--text)',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '600' }}>Écrire</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '2px' }}>Clavier actif</div>
+            </div>
+          </button>
+
+          {/* Bouton Parler */}
+          <button
+            onClick={() => isSupported ? setInputMode('voice') : null}
+            style={{
+              flex: 1,
+              padding: '20px 16px',
+              borderRadius: '16px',
+              background: 'var(--bg-card)',
+              border: '2px solid var(--border)',
+              color: isSupported ? 'var(--text)' : 'var(--text-3)',
+              cursor: isSupported ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              opacity: isSupported ? 1 : 0.5,
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => { if (isSupported) e.currentTarget.style.borderColor = 'var(--accent)' }}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '600' }}>Parler</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '2px' }}>
+                {isSupported ? 'Micro actif' : 'Non disponible'}
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Interface principale ─────────────────────────────────
   return (
     <div style={{
       height: '100%',
@@ -187,7 +265,7 @@ export default function Session() {
                 animation: 'glow-pulse 2s ease-in-out infinite',
               }} />
               <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text)' }}>
-                Session avec Maya
+                Session avec {avatarName}
               </span>
             </div>
             <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
@@ -197,8 +275,51 @@ export default function Session() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Toggle TTS voix */}
+          {isSessionPremium && (
+            <button
+              onClick={() => { if (ttsEnabled) stopTTS(); setTtsEnabled(v => !v) }}
+              title={ttsEnabled ? 'Désactiver la voix' : 'Activer la voix'}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                background: ttsEnabled ? 'var(--accent-dim)' : 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                color: ttsEnabled ? 'var(--accent)' : 'var(--text-3)',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+              }}
+            >
+              {ttsEnabled ? '🔊 Voix' : '🔇 Voix'}
+            </button>
+          )}
+          {/* Toggle parler/écrire pendant la session */}
           {isSupported && (
-            <VoiceToggle voiceMode={voiceMode} onToggle={toggleVoice} />
+            <button
+              onClick={() => {
+                if (inputMode === 'voice') {
+                  stopListening()
+                  setVoiceMode(false)
+                  setInputMode('text')
+                } else {
+                  setInputMode('voice')
+                }
+              }}
+              title={inputMode === 'voice' ? 'Passer en mode écriture' : 'Passer en mode vocal'}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                background: inputMode === 'voice' ? 'var(--accent-dim)' : 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                color: inputMode === 'voice' ? 'var(--accent)' : 'var(--text-3)',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+              }}
+            >
+              {inputMode === 'voice' ? '🎙️ Vocal' : '⌨️ Écrit'}
+            </button>
           )}
           <button
             onClick={() => navigate('/settings')}
@@ -235,7 +356,7 @@ export default function Session() {
         flexShrink: 0,
         gap: '12px',
       }}>
-        <MaxAvatar isSpeaking={isSpeaking} size={88} profile={profile?.intelligence_dominante ?? null} />
+        <MaxAvatar isSpeaking={false} size={88} profile={profile?.intelligence_dominante ?? null} />
         <div style={{ flex: 1 }}>
           <PomodoroTimer />
         </div>
@@ -245,7 +366,7 @@ export default function Session() {
       {!isSessionPremium && <UpgradeBanner visible={showUpgradeBanner} />}
 
       {/* ── Chat ── */}
-      <ChatInterface messages={messages} loading={loading} speakingMessageId={speakingMessageId} ttsEnabled={isSessionPremium} />
+      <ChatInterface messages={messages} loading={loading} speakingMessageId={ttsEnabled ? speakingMessageId : null} ttsEnabled={ttsEnabled} />
 
       {/* ── Retry status ── */}
       {retryStatus && (
@@ -272,13 +393,9 @@ export default function Session() {
         }}>{error}</div>
       )}
 
-      {/* ── Input area ── */}
-      <div style={{
-        borderTop: '1px solid var(--border)',
-        flexShrink: 0,
-      }}>
-        {voiceMode ? (
-          /* Voice mode controls */
+      {/* ── Zone de saisie ── */}
+      <div style={{ borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+        {inputMode === 'voice' ? (
           <div style={{
             padding: '16px',
             display: 'flex',
@@ -288,17 +405,31 @@ export default function Session() {
             background: 'var(--bg-card)',
           }}>
             <DocumentScanner onScan={handleScan} isPremium={isSessionPremium} />
-
             <VoiceButton
               isListening={isListening}
               isSpeaking={isSpeaking}
               onClick={handleVoiceButton}
               disabled={loading}
             />
-
+            {/* Texte interim visible */}
+            {interimText && (
+              <div style={{
+                position: 'absolute',
+                bottom: '90px',
+                left: '16px', right: '16px',
+                padding: '10px 14px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                fontSize: '14px',
+                color: 'var(--text-3)',
+                fontStyle: 'italic',
+              }}>
+                {interimText}
+              </div>
+            )}
           </div>
         ) : (
-          /* Text mode — mic button always visible alongside input */
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0' }}>
             <div style={{ padding: '12px 0 12px 16px', flexShrink: 0 }}>
               <DocumentScanner onScan={handleScan} isPremium={isSessionPremium} />
@@ -307,22 +438,7 @@ export default function Session() {
               <InputArea
                 onSend={sendMessage}
                 disabled={loading}
-                placeholder={`Réponds à Maya...`}
-              />
-            </div>
-            <div style={{
-              padding: '0 12px 12px 0',
-              background: 'var(--bg-card)',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'flex-end',
-              flexShrink: 0,
-            }}>
-              <VoiceButton
-                isListening={isListening}
-                isSpeaking={isSpeaking}
-                onClick={handleVoiceButton}
-                disabled={!isSupported || loading}
+                placeholder={`Réponds à ${avatarName}...`}
               />
             </div>
           </div>

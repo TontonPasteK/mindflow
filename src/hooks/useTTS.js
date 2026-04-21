@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 
-export function useTTS({ enabled = true, onPlayStart } = {}) {
+export function useTTS({ enabled = false, onPlayStart } = {}) {
   const [isSpeaking, setIsSpeaking]   = useState(false)
   const audioRef                       = useRef(null)
   const queueRef                       = useRef([])
