@@ -4,7 +4,8 @@ import { useSession } from '../context/SessionContext'
 import { buildPremiumPrompt, buildFreePrompt, buildDrMindPrompt } from '../services/prompts'
 import { upsertProfile, addVictory, getLastSession } from '../services/supabase'
 
-const MAX_HISTORY = 20
+const MAX_HISTORY_SESSION = 20
+const MAX_HISTORY_DRMIND  = 60
 
 function parseTags(content) {
   let text = content
@@ -83,20 +84,12 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
     try {
       const systemPrompt = await buildSystemPrompt()
 
-      // Greeting selon le mode
-      let greeting
-      if (mode === 'drMind') {
-        greeting = seance === 1
-          ? `Bonjour ${user?.prenom || ''} ! Moi c'est Dr Mind. Avant que tu rencontres ton assistant personnel, j'ai besoin de comprendre comment TOI tu fonctionnes — parce que tout le monde pense différemment. On va passer environ 20 minutes ensemble aujourd'hui. Pas de bonnes ou mauvaises réponses — juste ce qui se passe vraiment dans ta tête. On commence ?`
-          : `Bon retour ${user?.prenom || ''} ! La dernière fois on a bien avancé. Avant de continuer — qu'est-ce qui te revient de ce qu'on a fait ensemble ?`
-      } else if (isPremium) {
-        greeting = `Hey ${user?.prenom || ''} ! Content de te voir. C'est quoi au programme ce soir ?`
-      } else {
-        greeting = `Salut ${user?.prenom || ''} ! Je suis Maya. T'as quoi comme devoirs ce soir ?`
-      }
-
       if (isPremium || mode === 'drMind') {
-        const initMsg = { role: 'user', content: mode === 'drMind' ? 'Bonjour Dr Mind !' : 'Bonjour Maya !' }
+        // Mode premium ou Dr Mind : appel API pour le greeting
+        const initMsg = {
+          role: 'user',
+          content: mode === 'drMind' ? 'Bonjour Dr Mind !' : `Bonjour !`
+        }
         historyRef.current = [initMsg]
 
         const msgId = Date.now() + Math.random()
@@ -132,15 +125,40 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
         } else {
           if (onTTSRef.current) onTTSRef.current(text, greetMsg.id)
         }
+
       } else {
-        addMessage('assistant', greeting)
-        if (onTTSRef.current) onTTSRef.current(greeting)
+        // Mode free (Dr Mind Light) : appel API pour un vrai greeting dynamique
+        const prenom = user?.prenom || ''
+        const initMsg = { role: 'user', content: 'Bonjour !' }
+        historyRef.current = [initMsg]
+
+        const msgId = Date.now() + Math.random()
+
+        let rawText
+        for (let attempt = 1; attempt <= 4; attempt++) {
+          try {
+            rawText = await callAIStream(systemPrompt, historyRef.current, () => {})
+            break
+          } catch (err) {
+            if (attempt <= 3 && err.message?.includes('Overloaded')) {
+              setRetryStatus('Dr Mind réfléchit...')
+              await new Promise(r => setTimeout(r, 3000))
+            } else {
+              throw err
+            }
+          }
+        }
+
+        const { text } = parseTags(rawText)
+        addMessage('assistant', text, { id: msgId })
+        historyRef.current = [...historyRef.current, { role: 'assistant', content: text }]
       }
+
     } catch (err) {
       console.error('initChat error:', err)
       const fallback = mode === 'drMind'
         ? `Bonjour ! Je suis Dr Mind. On va découvrir ensemble comment tu apprends le mieux. On commence ?`
-        : `Salut ! Je suis Maya. C'est quoi au programme ce soir ?`
+        : `Salut ! Je suis Dr Mind. Comment tu vas ? C'est quoi au programme ce soir ?`
       addMessage('assistant', fallback)
     } finally {
       setRetryStatus(null)
@@ -168,6 +186,7 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
 
     try {
       const systemPrompt = await buildSystemPrompt()
+      const maxHistory = mode === 'drMind' ? MAX_HISTORY_DRMIND : MAX_HISTORY_SESSION
 
       let apiContent
       if (fileData) {
@@ -183,7 +202,7 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
         apiContent = content.trim()
       }
 
-      historyRef.current = [...historyRef.current, { role: 'user', content: apiContent }].slice(-MAX_HISTORY)
+      historyRef.current = [...historyRef.current, { role: 'user', content: apiContent }].slice(-maxHistory)
 
       const msgId = Date.now() + Math.random()
       let earlyTtsSentence = null
@@ -202,7 +221,7 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
       const { text, profileData, strategies, victory, notifyParents } = parseTags(rawResponse)
 
       const assistantMsg = addMessage('assistant', text, { strategies, id: msgId })
-      historyRef.current = [...historyRef.current, { role: 'assistant', content: text }].slice(-MAX_HISTORY)
+      historyRef.current = [...historyRef.current, { role: 'assistant', content: text }].slice(-maxHistory)
       await persistMessage('assistant', text)
 
       // Profil détecté — enregistrement
