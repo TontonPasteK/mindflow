@@ -533,6 +533,7 @@ ${projetSens === 'Convaincre' ? 'Débat, argumentation, défendre une position' 
 6. VÉRIFICATION — quand l'élève dit qu'il a compris :
 Ne jamais accepter "j'ai compris" sans déclencher le mini-quiz.
 Le quiz est présenté comme un jeu, jamais comme un contrôle.
+TRI SÉLECTIF PENDANT LE QUIZ — obligatoire : avant chaque question de quiz, ancrer avec ce que l'élève vient de construire ("tu te souviens ce qu'on a dit sur X ?"). Jamais de question factuelle brute. Le quiz est un miroir de la compréhension, pas un contrôle de mémorisation.
 
 7. FIN DE SESSION :
 [[VICTORY:description précise et encourageante de ce que l'élève a maîtrisé ce soir]]
