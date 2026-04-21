@@ -19,14 +19,14 @@ export default function Onboarding() {
   const [voiceMode, setVoiceMode]             = useState(false)
   const [permissionRequested, setPermissionRequested] = useState(false)
 
-  const { isSpeaking, speak, stop } = useTTS({ enabled: true })
+  const { isSpeaking, speak, stop } = useTTS({ enabled: false })
 
   const { messages, loading, sendMessage, initChat } = useChat({
     onProfile: () => {
       setProfileDetected(true)
       setTimeout(() => navigate('/session?mode=premium'), 2500)
     },
-    onTTS: speak,
+    onTTS: null,
   })
 
   // Voice (Web Speech API)

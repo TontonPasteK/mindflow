@@ -22,7 +22,7 @@ export default function DrMind() {
   const [voiceMode, setVoiceMode]             = useState(false)
   const [permissionRequested, setPermissionRequested] = useState(false)
 
-  const { isSpeaking, speak, stop } = useTTS({ enabled: true })
+  const { isSpeaking, speak, stop } = useTTS({ enabled: false })
 
   const { messages, loading, sendMessage, initChat } = useChat({
     mode: 'drMind',
@@ -30,14 +30,12 @@ export default function DrMind() {
     onProfile: (profileData) => {
       setProfileDetected(true)
       if (profileData?.onboarding_complete) {
-        // Séance 2 terminée — révélation + transition avatar
         setTimeout(() => navigate('/session?mode=premium'), 3000)
       } else {
-        // Séance 1 terminée — proposer séance 2
         setTimeout(() => navigate('/choice?drMind=seance1'), 2500)
       }
     },
-    onTTS: speak,
+    onTTS: null,
   })
 
   const {
