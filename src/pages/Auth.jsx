@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { signUp, signIn, supabase } from '../services/supabase'
+import { signUp, signIn, signInWithCode, supabase } from '../services/supabase'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 
@@ -13,6 +13,10 @@ export default function Auth() {
   const [globalError, setGlobalError] = useState('')
   const [resetSent, setResetSent] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
+  const [acceptedCGU, setAcceptedCGU] = useState(false)
+  // BLOC 10 — connexion par code élève
+  const [codeMode, setCodeMode] = useState(false)
+  const [accessCode, setAccessCode] = useState('')
   const navigate = useNavigate()
 
   const handleForgotPassword = async () => {
@@ -49,7 +53,25 @@ export default function Auth() {
     if (!form.password)        errs.password = 'Le mot de passe est requis'
     if (mode === 'signup' && form.password.length < 8)
       errs.password = 'Au moins 8 caractères'
+    if (mode === 'signup' && !acceptedCGU)
+      errs.cgu = 'Tu dois accepter les CGU pour continuer'
     return errs
+  }
+
+  // BLOC 10 — connexion par code
+  const handleCodeSubmit = async (e) => {
+    e.preventDefault()
+    if (!accessCode.trim()) { setGlobalError('Entre ton code d\'accès'); return }
+    setLoading(true)
+    setGlobalError('')
+    try {
+      await signInWithCode(accessCode.trim())
+      navigate('/session')
+    } catch (err) {
+      setGlobalError(err.message || 'Code invalide')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -93,7 +115,7 @@ export default function Auth() {
         animation: 'fade-up 0.4s ease',
       }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{
             width: '48px', height: '48px',
             background: 'var(--accent)',
@@ -107,17 +129,66 @@ export default function Auth() {
             </svg>
           </div>
           <h1 style={{ fontFamily: 'var(--f-title)', fontSize: '24px', marginBottom: '6px' }}>
-            {mode === 'signup' ? 'Crée ton compte' : 'Bon retour !'}
+            {codeMode ? 'Espace élève' : mode === 'signup' ? 'Crée ton compte' : 'Bon retour !'}
           </h1>
           <p style={{ color: 'var(--text-2)', fontSize: '14px' }}>
-            {mode === 'signup'
+            {codeMode
+              ? 'Entre ton code donné par un parent'
+              : mode === 'signup'
               ? 'Gratuit pour commencer'
               : 'Connecte-toi à ton espace Evokia'}
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* BLOC 10 — Onglets parent / élève */}
+        <div style={{ display: 'flex', gap: '0', marginBottom: '20px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <button
+            type="button"
+            onClick={() => { setCodeMode(false); setGlobalError('') }}
+            style={{
+              flex: 1, padding: '10px', border: 'none', cursor: 'pointer',
+              background: !codeMode ? 'var(--accent-dim)' : 'var(--bg-card)',
+              color: !codeMode ? 'var(--accent)' : 'var(--text-3)',
+              fontWeight: !codeMode ? '600' : '400', fontSize: '13px',
+            }}
+          >Compte parent / adulte</button>
+          <button
+            type="button"
+            onClick={() => { setCodeMode(true); setGlobalError('') }}
+            style={{
+              flex: 1, padding: '10px', border: 'none', cursor: 'pointer',
+              borderLeft: '1px solid var(--border)',
+              background: codeMode ? 'var(--accent-dim)' : 'var(--bg-card)',
+              color: codeMode ? 'var(--accent)' : 'var(--text-3)',
+              fontWeight: codeMode ? '600' : '400', fontSize: '13px',
+            }}
+          >Code élève</button>
+        </div>
+
+        {/* BLOC 10 — Formulaire code élève */}
+        {codeMode && (
+          <form onSubmit={handleCodeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <Input
+              label="Code d'accès (6 caractères)"
+              value={accessCode}
+              onChange={e => { setAccessCode(e.target.value.toUpperCase()); setGlobalError('') }}
+              placeholder="ABC123"
+              required
+              autoFocus
+            />
+            {globalError && (
+              <p style={{ fontSize: '13px', color: 'var(--error)', padding: '10px 14px', background: 'var(--error-dim)', borderRadius: 'var(--r-sm)', margin: 0 }}>
+                {globalError}
+              </p>
+            )}
+            <Button type="submit" loading={loading} fullWidth size="lg">
+              Accéder à ma session
+            </Button>
+          </form>
+        )}
+
+        {/* Form parent/adulte */}
+        {!codeMode && <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {mode === 'signup' && (
             <>
               <Input
@@ -232,10 +303,30 @@ export default function Auth() {
             }}>{globalError}</p>
           )}
 
+          {/* BLOC 12 — Case CGU (inscription uniquement) */}
+          {mode === 'signup' && (
+            <div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.5' }}>
+                <input
+                  type="checkbox"
+                  checked={acceptedCGU}
+                  onChange={e => { setAcceptedCGU(e.target.checked); setErrors(er => ({ ...er, cgu: '' })) }}
+                  style={{ marginTop: '2px', accentColor: 'var(--accent)', flexShrink: 0 }}
+                />
+                <span>
+                  J'accepte les{' '}
+                  <Link to="/legal" target="_blank" style={{ color: 'var(--accent)' }}>CGU et la politique de confidentialité</Link>
+                  {' '}(données des mineurs protégées, RGPD)
+                </span>
+              </label>
+              {errors.cgu && <p style={{ fontSize: '12px', color: 'var(--error)', margin: '4px 0 0' }}>{errors.cgu}</p>}
+            </div>
+          )}
+
           <Button type="submit" loading={loading} fullWidth size="lg" style={{ marginTop: '4px' }}>
             {mode === 'signup' ? 'Créer mon compte' : 'Se connecter'}
           </Button>
-        </form>
+        </form>}
 
         {/* Toggle mode */}
         <p style={{

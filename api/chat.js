@@ -1,10 +1,41 @@
 /**
  * Vercel Serverless Function — /api/chat
- * Routes all requests to Claude Sonnet (Anthropic API).
- *
- * POST body: { systemPrompt, messages, stream? }
- *   - messages: [{role, content}]  (content can be a string or vision array)
+ * POST body: { systemPrompt, messages, stream?, userId? }
  */
+
+// ─── Mem0 (BLOC 4) ────────────────────────────────────────────────────────────
+async function mem0Search(userId, query) {
+  const key = process.env.MEM0_API_KEY
+  if (!key || !userId) return null
+  try {
+    const res = await fetch('https://api.mem0.ai/v1/memories/search/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Token ${key}` },
+      body: JSON.stringify({ query, user_id: userId, limit: 5 }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.results || null
+  } catch { return null }
+}
+
+async function mem0Add(userId, messages) {
+  const key = process.env.MEM0_API_KEY
+  if (!key || !userId) return
+  try {
+    await fetch('https://api.mem0.ai/v1/memories/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Token ${key}` },
+      body: JSON.stringify({ messages, user_id: userId }),
+    })
+  } catch {}
+}
+
+function buildMem0Injection(memories) {
+  if (!memories || memories.length === 0) return ''
+  const lines = memories.map(m => `- ${m.memory}`).join('\n')
+  return `\nMÉMOIRE INTER-SESSIONS (Mem0) :\n${lines}`
+}
 
 // ─── Rate limiting (in-memory, per Vercel instance) ──────────────────────────
 const RATE_LIMIT_MAX    = 200
@@ -72,7 +103,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' })
   }
 
-  const { systemPrompt, messages, stream: wantStream } = body
+  const { systemPrompt, messages, stream: wantStream, userId } = body
 
   if (!systemPrompt || !messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Missing systemPrompt or messages' })
@@ -83,23 +114,109 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' })
   }
 
+  // BLOC 4 — Mem0 : injecter mémoires inter-sessions
+  let enrichedSystemPrompt = systemPrompt
+  let mem0MessagesForSave = null
+
+  if (userId) {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+    const query = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : 'session'
+    const memories = await mem0Search(userId, query)
+    if (memories && memories.length > 0) {
+      enrichedSystemPrompt = systemPrompt + buildMem0Injection(memories)
+    }
+    mem0MessagesForSave = messages.slice(-4).map(m => ({
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content : '[vision]',
+    }))
+  }
+
   try {
-    if (wantStream) return await callClaudeStream(systemPrompt, messages, apiKey, res)
-    const content = await callClaude(systemPrompt, messages, apiKey)
-    return res.status(200).json({ content })
+    let result
+    if (wantStream) {
+      result = await callClaudeStream(enrichedSystemPrompt, messages, apiKey, res)
+    } else {
+      const content = await callClaude(enrichedSystemPrompt, messages, apiKey)
+      result = content
+      res.status(200).json({ content })
+    }
+
+    // BLOC 4 — Mem0 : sauvegarder la conversation après réponse
+    if (userId && mem0MessagesForSave) {
+      const assistantReply = typeof result === 'string' ? result : ''
+      const toSave = assistantReply
+        ? [...mem0MessagesForSave, { role: 'assistant', content: assistantReply }]
+        : mem0MessagesForSave
+      mem0Add(userId, toSave).catch(() => {})
+    }
+
+    return
   } catch (err) {
     console.error('[chat API] error:', err.message)
     if (!res.headersSent) return res.status(500).json({ error: err.message || 'AI service error' })
   }
 }
 
+// ─── Mistral OCR fallback (BLOC 11) ──────────────────────────────────────────
+
+async function scanWithMistral(imageBase64, mimeType) {
+  const mistralKey = process.env.MISTRAL_API_KEY
+  if (!mistralKey) return null
+  try {
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${mistralKey}` },
+      body: JSON.stringify({
+        model: 'mistral-ocr-latest',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+            { type: 'text', text: 'Transcris exactement le texte visible sur cette image.' },
+          ],
+        }],
+        max_tokens: 2048,
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content || null
+  } catch { return null }
+}
+
+function hasImageContent(messages) {
+  return messages.some(m => Array.isArray(m.content) && m.content.some(b => b.type === 'image'))
+}
+
+function extractImageFromMessages(messages) {
+  for (const m of [...messages].reverse()) {
+    if (Array.isArray(m.content)) {
+      const img = m.content.find(b => b.type === 'image')
+      if (img?.source?.data) return { base64: img.source.data, mimeType: img.source.media_type }
+    }
+  }
+  return null
+}
+
+function replaceImageWithText(messages, extractedText) {
+  return messages.map(m => {
+    if (!Array.isArray(m.content)) return m
+    const hasImg = m.content.some(b => b.type === 'image')
+    if (!hasImg) return m
+    const textBlocks = m.content.filter(b => b.type === 'text')
+    return {
+      ...m,
+      content: [...textBlocks, { type: 'text', text: `[Document OCR]\n${extractedText}` }],
+    }
+  })
+}
+
 // ─── Claude (non-streaming) ───────────────────────────────────────────────────
 
 async function callClaude(systemPrompt, messages, apiKey) {
-  // Convertir les content arrays vision pour Claude
-  const claudeMessages = messages.map(m => ({
+  let claudeMessages = messages.map(m => ({
     role: m.role,
-    content: Array.isArray(m.content) ? m.content : m.content,
+    content: m.content,
   }))
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -117,6 +234,18 @@ async function callClaude(systemPrompt, messages, apiKey) {
     }),
   })
 
+  // BLOC 11 — Mistral fallback si 429 sur une requête avec image
+  if (response.status === 429 && hasImageContent(messages)) {
+    const imgData = extractImageFromMessages(messages)
+    if (imgData) {
+      const ocrText = await scanWithMistral(imgData.base64, imgData.mimeType)
+      if (ocrText) {
+        const textMessages = replaceImageWithText(messages, ocrText)
+        return callClaude(systemPrompt, textMessages, apiKey)
+      }
+    }
+  }
+
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error?.message || `Claude error ${response.status}`)
@@ -129,10 +258,8 @@ async function callClaude(systemPrompt, messages, apiKey) {
 // ─── Claude (streaming) ───────────────────────────────────────────────────────
 
 async function callClaudeStream(systemPrompt, messages, apiKey, res) {
-  const claudeMessages = messages.map(m => ({
-    role: m.role,
-    content: Array.isArray(m.content) ? m.content : m.content,
-  }))
+  // BLOC 11 — Mistral fallback si image présente et 429 possible
+  let processedMessages = messages
 
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -147,9 +274,20 @@ async function callClaudeStream(systemPrompt, messages, apiKey, res) {
       max_tokens: 1024,
       stream:     true,
       system:     systemPrompt,
-      messages:   claudeMessages,
+      messages:   processedMessages,
     }),
   })
+
+  // BLOC 11 — Mistral fallback sur 429 avec image
+  if (claudeRes.status === 429 && hasImageContent(processedMessages)) {
+    const imgData = extractImageFromMessages(processedMessages)
+    if (imgData) {
+      const ocrText = await scanWithMistral(imgData.base64, imgData.mimeType)
+      if (ocrText) {
+        return callClaudeStream(systemPrompt, replaceImageWithText(processedMessages, ocrText), apiKey, res)
+      }
+    }
+  }
 
   if (!claudeRes.ok) {
     const err = await claudeRes.json().catch(() => ({}))

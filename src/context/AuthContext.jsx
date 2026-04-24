@@ -79,6 +79,9 @@ export function AuthProvider({ children }) {
     if (profileResult.status === 'fulfilled') setProfile(profileResult.value)
   }, [authUser])
 
+  // Détection rôle depuis profil Supabase (BLOC 10)
+  const role = profile?.role || 'eleve'
+
   const value = {
     authUser,
     user,
@@ -86,7 +89,9 @@ export function AuthProvider({ children }) {
     loading,
     plan: user?.plan === 'premium' ? 'premium' : 'free',
     isPremium: user?.plan === 'premium',
-    isParent: user?.role === 'parent',
+    isParent: role === 'parent',
+    isEleve: role === 'eleve',
+    role,
     isLoggingOut,
     setIsLoggingOut,
     refreshProfile,

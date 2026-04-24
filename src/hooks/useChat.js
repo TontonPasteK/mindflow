@@ -1,8 +1,13 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useSession } from '../context/SessionContext'
 import { buildPremiumPrompt, buildFreePrompt, buildDrMindPrompt } from '../services/prompts'
-import { upsertProfile, addVictory, getLastSession } from '../services/supabase'
+import {
+  upsertProfile, addVictory, getLastSession,
+  getNotionsTravaillees, upsertNotionTravaillee,
+  getKnowledgeGraph, upsertKnowledgeGraph,
+  addPoints,
+} from '../services/supabase'
 
 const MAX_HISTORY_SESSION = 20
 const MAX_HISTORY_DRMIND  = 60
@@ -45,7 +50,9 @@ function parseTags(content) {
   return { text, profileData, strategies, victory, notifyParents }
 }
 
-export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance = 1 }) {
+const BLOCAGE_KEYWORDS = ['je sais pas', 'j\'sais pas', 'aucune idée', 'je comprends pas', 'je comprends rien']
+
+export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance = 1, matiere = 'general' }) {
   const { user, profile, isPremium, refreshProfile } = useAuth()
   const { sessionId, addExchange, addMatiere, persistMessage } = useSession()
 
@@ -57,14 +64,21 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
   const initRef                   = useRef(false)
   const onTTSRef                  = useRef(onTTS)
   onTTSRef.current                = onTTS
+  const matiereRef                = useRef(matiere)
+  const blocageCountRef           = useRef(0)
+  useEffect(() => { matiereRef.current = matiere }, [matiere])
 
   const buildSystemPrompt = useCallback(async () => {
     if (mode === 'drMind') {
       return buildDrMindPrompt(user, seance)
     }
     if (isPremium) {
-      const lastSession = await getLastSession(user.id).catch(() => null)
-      return buildPremiumPrompt(user, profile, lastSession)
+      const [lastSession, notionsPrecedentes, knowledgeGraph] = await Promise.all([
+        getLastSession(user.id).catch(() => null),
+        getNotionsTravaillees(user.id, matiereRef.current).catch(() => []),
+        getKnowledgeGraph(user.id).catch(() => null),
+      ])
+      return buildPremiumPrompt(user, profile, lastSession, matiereRef.current, notionsPrecedentes, knowledgeGraph)
     }
     return buildFreePrompt(user)
   }, [mode, seance, isPremium, user, profile])
@@ -102,7 +116,7 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
             rawText = await callAIStream(systemPrompt, historyRef.current, (sentence) => {
               earlyTtsSentence = sentence
               if (onTTSRef.current) onTTSRef.current(sentence, msgId)
-            })
+            }, user?.id)
             break
           } catch (err) {
             if (attempt <= 3 && err.message?.includes('Overloaded')) {
@@ -137,7 +151,7 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
         let rawText
         for (let attempt = 1; attempt <= 4; attempt++) {
           try {
-            rawText = await callAIStream(systemPrompt, historyRef.current, () => {})
+            rawText = await callAIStream(systemPrompt, historyRef.current, () => {}, user?.id)
             break
           } catch (err) {
             if (attempt <= 3 && err.message?.includes('Overloaded')) {
@@ -210,7 +224,7 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
       const rawResponse = await callAIStream(systemPrompt, historyRef.current, (sentence) => {
         earlyTtsSentence = sentence
         if (onTTSRef.current) onTTSRef.current(sentence, msgId)
-      })
+      }, user?.id)
 
       if (fileData) {
         const ref = (fileData.mimeType === 'application/pdf' ? '[PDF envoyé]' : '[Image envoyée]') +
@@ -246,10 +260,61 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
         // TODO Phase 2 : déclencher email via Supabase Edge Function
       }
 
+      // Détection blocage
+      const isBlockage = BLOCAGE_KEYWORDS.some(kw => content.toLowerCase().includes(kw))
+      if (isBlockage) {
+        blocageCountRef.current += 1
+      } else {
+        blocageCountRef.current = 0
+      }
+      if (blocageCountRef.current >= 3 && user?.id) {
+        const sujet = matiereRef.current !== 'general' ? matiereRef.current : 'sujet inconnu'
+        getKnowledgeGraph(user.id).then(kg => {
+          const current = kg?.blocages_recurrents || []
+          const entry = `Blocage ${sujet} (détecté x3)`
+          if (!current.includes(entry)) {
+            upsertKnowledgeGraph(user.id, {
+              blocages_recurrents: [...current, entry].slice(-20),
+            }).catch(() => {})
+          }
+        }).catch(() => {})
+        blocageCountRef.current = 0
+      }
+
       // Victoire
       if (victory && onVictory && sessionId) {
         const v = await addVictory(user.id, sessionId, victory)
         onVictory(v)
+
+        // Mise à jour knowledge graph + points
+        if (user?.id) {
+          const lower = victory.toLowerCase()
+          const bloomLevel = lower.includes('niveau 3') || lower.includes('transf') ? 3
+            : lower.includes('niveau 2') || lower.includes('appliqu') ? 2 : 1
+          const pts = bloomLevel === 3 ? 30 : bloomLevel === 2 ? 20 : 10
+          addPoints(user.id, pts).catch(() => {})
+
+          getKnowledgeGraph(user.id).then(kg => {
+            const maitrisees = kg?.notions_maitrisees || []
+            const enCours = kg?.notions_en_cours || []
+            const shortV = victory.slice(0, 60)
+            if (bloomLevel >= 2 && !maitrisees.includes(shortV)) {
+              upsertKnowledgeGraph(user.id, {
+                notions_maitrisees: [...maitrisees, shortV].slice(-50),
+                notions_en_cours: enCours.filter(n => n !== shortV),
+              }).catch(() => {})
+              if (matiereRef.current !== 'general') {
+                upsertNotionTravaillee(user.id, matiereRef.current, shortV, true).catch(() => {})
+              }
+            } else if (bloomLevel === 1) {
+              if (!enCours.includes(shortV)) {
+                upsertKnowledgeGraph(user.id, {
+                  notions_en_cours: [...enCours, shortV].slice(-20),
+                }).catch(() => {})
+              }
+            }
+          }).catch(() => {})
+        }
       }
 
       // Détection matière (sessions normales uniquement)
@@ -300,11 +365,11 @@ function assignAvatar(profileData) {
 }
 
 // ─── Streaming API ────────────────────────────────────────────────────────────
-async function callAIStream(systemPrompt, messages, onFirstSentence) {
+async function callAIStream(systemPrompt, messages, onFirstSentence, userId) {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ systemPrompt, messages, stream: true }),
+    body: JSON.stringify({ systemPrompt, messages, stream: true, userId }),
   })
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))

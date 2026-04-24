@@ -748,12 +748,14 @@ function LandingFooter() {
           Evokia © 2026 — Tous droits réservés
         </p>
         <div style={{ display: 'flex', gap: '20px' }}>
-          {['Confidentialité', 'CGU'].map(label => (
-            <a key={label} href="#" style={{ fontSize: '13px', color: 'var(--text-3)', transition: 'color 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
-            >{label}</a>
-          ))}
+          <a href="/legal" style={{ fontSize: '13px', color: 'var(--text-3)', transition: 'color 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+          >CGU & Confidentialité</a>
+          <a href="mailto:scolrcoaching@gmail.com" style={{ fontSize: '13px', color: 'var(--text-3)', transition: 'color 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+          >Contact</a>
         </div>
       </div>
     </footer>

@@ -14,6 +14,7 @@ import ParentDashboard from '../pages/ParentDashboard'
 import Pricing         from '../pages/Pricing'
 import Settings        from '../pages/Settings'
 import ResetPassword   from '../pages/ResetPassword'
+import Legal           from '../pages/Legal'
 
 export default function AppRoutes() {
   return (
@@ -23,6 +24,7 @@ export default function AppRoutes() {
       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/legal" element={<Legal />} />
 
       {/* Protected */}
       <Route path="/choice"     element={<ProtectedRoute><Choice /></ProtectedRoute>} />

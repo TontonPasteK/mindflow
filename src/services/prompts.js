@@ -86,6 +86,15 @@ PROJETS DE SENS LA GARANDERIE (adapter le style selon le projet détecté) :
 
 // ─── Protocole quiz 3 niveaux ─────────────────────────────────────────────────
 const QUIZ_PROTOCOL = `
+QUIZ DE CLÔTURE AUTOMATIQUE :
+Déclencheurs : l'élève dit "au revoir", "j'ai fini", "c'est bon", "j'y vais", "ciao", "merci", "bonne nuit", "à demain".
+1. "Juste avant qu'on s'arrête — question rapide pour fixer ça dans ta tête."
+2. Toujours commencer par le niveau 1 (gagnable).
+3. Si réussi niveau 1 → proposer niveau 2 en optionnel : "T'en as encore pour 30 secondes ?"
+4. Maximum 2 questions. Jamais forcer le niveau 3 en clôture.
+5. Toujours terminer par [[VICTORY:...]] même partiel.
+6. Si l'élève dit non → "Ok, bonne continuation. T'as bien bossé." + [[VICTORY:...]] et laisser partir sans bloquer.
+
 MINI-QUIZ — déclenché UNIQUEMENT quand l'élève dit qu'il a compris (jamais imposé) :
 
 AVANT LE QUIZ — ancrage passion :
@@ -451,7 +460,7 @@ EMAIL PARENTS (déclencher automatiquement) :
 }
 
 // ─── Prompt premium — avatars ─────────────────────────────────────────────────
-export function buildPremiumPrompt(user, profile, lastSession) {
+export function buildPremiumPrompt(user, profile, lastSession, matiere = 'general', notionsPrecedentes = [], knowledgeGraph = null) {
   const prenom = user?.prenom || 'toi'
   const niveau = user?.niveau || null
   const adult = isAdult(niveau)
@@ -468,8 +477,29 @@ export function buildPremiumPrompt(user, profile, lastSession) {
     ? `\nPROFIL PARTIEL : Dr Mind n'a pas encore terminé le diagnostic. Tu travailles avec ce que tu as. Glisse naturellement à un moment : "Si tu complètes ton profil avec Dr Mind, je pourrai t'aider encore mieux sur ce genre de truc." Une seule fois par session, jamais de manière forcée.`
     : ''
 
+  const matiereSection = matiere && matiere !== 'general'
+    ? `\nMATIÈRE DE CETTE SESSION : ${matiere}. Concentre toutes tes analogies et tes exemples sur cette matière. Adapte le vocabulaire au niveau scolaire de l'élève.`
+    : ''
+
+  const notionsSection = notionsPrecedentes.length > 0
+    ? `\nNOTIONS DÉJÀ TRAVAILLÉES EN ${matiere.toUpperCase()} : ${notionsPrecedentes.filter(n => n.maitrisee).map(n => '✓ ' + n.notion).join(', ')}${notionsPrecedentes.filter(n => !n.maitrisee).length > 0 ? ' | En cours : ' + notionsPrecedentes.filter(n => !n.maitrisee).map(n => n.notion).join(', ') : ''}. Commence par un tri sélectif sur ces notions si le sujet du jour y est lié.`
+    : ''
+
   const rappelSection = lastSession?.matieres?.length
     ? `\nRAPPEL SESSION PRÉCÉDENTE : La dernière fois tu as travaillé sur ${lastSession.matieres.join(', ')}. Si moins de 4 jours, commence par : "Qu'est-ce qui te revient de la dernière fois ?" — tri sélectif avant tout.`
+    : ''
+
+  const kgSection = knowledgeGraph
+    ? (() => {
+        const maitrisees = (knowledgeGraph.notions_maitrisees || []).slice(-10)
+        const enCours    = (knowledgeGraph.notions_en_cours || []).slice(-5)
+        const blocages   = (knowledgeGraph.blocages_recurrents || []).slice(-5)
+        let s = '\nKNOWLEDGE GRAPH (mémoire inter-sessions) :'
+        if (maitrisees.length) s += `\n- Maîtrisées : ${maitrisees.join(', ')}`
+        if (enCours.length)    s += `\n- En cours : ${enCours.join(', ')}`
+        if (blocages.length)   s += `\n- Blocages persistants : ${blocages.join(', ')} → aborder ces points avec douceur, chercher un nouvel angle.`
+        return s
+      })()
     : ''
 
   const niveauSection = niveau
@@ -490,7 +520,7 @@ Profil cognitif : ${visuel}% visuel, ${auditif}% auditif, ${kinesthesique}% kine
 Projet de sens : ${projetSens}
 Intelligence dominante : ${intelligence}
 Passions : ${passions}
-${niveauSection}${toneSection}${profilPartiel}${rappelSection}
+${niveauSection}${toneSection}${profilPartiel}${rappelSection}${kgSection}
 
 ${PEDAGOGIE_LIBRARY}
 

@@ -214,3 +214,177 @@ export async function getChildStats(childId) {
 
   return { sessions, victories }
 }
+
+// ─── Notions travaillées (BLOC 2) ────────────────────────────────────────────
+
+export async function getNotionsTravaillees(userId, matiere) {
+  const query = supabase
+    .from('notions_travaillees')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (matiere && matiere !== 'general') query.eq('matiere', matiere)
+  const { data, error } = await query
+  if (error) throw error
+  return data || []
+}
+
+export async function upsertNotionTravaillee(userId, matiere, notion, maitrisee = false) {
+  const { data: existing } = await supabase
+    .from('notions_travaillees')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('matiere', matiere)
+    .ilike('notion', notion)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('notions_travaillees')
+      .update({ maitrisee })
+      .eq('id', existing.id)
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('notions_travaillees')
+      .insert({ user_id: userId, matiere, notion, maitrisee })
+    if (error) throw error
+  }
+}
+
+// ─── Knowledge Graph (BLOC 3) ────────────────────────────────────────────────
+
+export async function getKnowledgeGraph(userId) {
+  const { data, error } = await supabase
+    .from('knowledge_graph')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function upsertKnowledgeGraph(userId, updates) {
+  const { data: existing } = await supabase
+    .from('knowledge_graph')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const current = existing || {
+    notions_maitrisees: [],
+    notions_en_cours: [],
+    blocages_recurrents: [],
+    passions_detectees: [],
+  }
+
+  const merged = {
+    user_id: userId,
+    notions_maitrisees: updates.notions_maitrisees ?? current.notions_maitrisees,
+    notions_en_cours: updates.notions_en_cours ?? current.notions_en_cours,
+    blocages_recurrents: updates.blocages_recurrents ?? current.blocages_recurrents,
+    passions_detectees: updates.passions_detectees ?? current.passions_detectees,
+    updated_at: new Date().toISOString(),
+  }
+
+  const { error } = await supabase
+    .from('knowledge_graph')
+    .upsert(merged, { onConflict: 'user_id' })
+  if (error) throw error
+}
+
+// ─── Streak & Points (BLOC 6) ────────────────────────────────────────────────
+
+export async function updateStreak(userId) {
+  const { data: prof, error } = await supabase
+    .from('profiles')
+    .select('streak, last_session_date')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
+
+  const today = new Date().toISOString().slice(0, 10)
+  const lastDate = prof?.last_session_date
+
+  if (lastDate === today) return prof?.streak ?? 1
+
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const newStreak = lastDate === yesterday ? (prof?.streak ?? 0) + 1 : 1
+
+  await supabase
+    .from('profiles')
+    .update({ streak: newStreak, last_session_date: today })
+    .eq('user_id', userId)
+
+  return newStreak
+}
+
+export async function addPoints(userId, pts) {
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('points')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const newPoints = (prof?.points ?? 0) + pts
+  await supabase
+    .from('profiles')
+    .update({ points: newPoints })
+    .eq('user_id', userId)
+  return newPoints
+}
+
+// ─── Code accès élève (BLOC 10) ──────────────────────────────────────────────
+
+export async function getProfileByAccessCode(code) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*, users(*)')
+    .eq('code_acces', code.toUpperCase())
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function generateAccessCode(parentId, eleve) {
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+  const { data: authData, error: authErr } = await supabase.auth.signUp({
+    email: `${code.toLowerCase()}@evokia.eleve`,
+    password: code + parentId.slice(0, 8),
+    options: { data: { prenom: eleve.prenom, niveau: eleve.niveau || '' } },
+  })
+  if (authErr) throw authErr
+
+  const childId = authData.user?.id
+  if (!childId) throw new Error('Erreur création compte élève')
+
+  const { error: profErr } = await supabase
+    .from('profiles')
+    .upsert({
+      user_id: childId,
+      role: 'eleve',
+      parent_id: parentId,
+      code_acces: code,
+      onboarding_complete: false,
+      seance_drMind: 0,
+    }, { onConflict: 'user_id' })
+  if (profErr) throw profErr
+
+  return { code, childId }
+}
+
+export async function signInWithCode(code) {
+  const profile = await getProfileByAccessCode(code)
+  if (!profile) throw new Error('Code invalide ou expiré')
+
+  const parentId = profile.parent_id
+  const fakeEmail = `${code.toLowerCase()}@evokia.eleve`
+  const fakePassword = code + parentId.slice(0, 8)
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: fakeEmail,
+    password: fakePassword,
+  })
+  if (error) throw new Error('Code invalide ou expiré')
+  return data
+}

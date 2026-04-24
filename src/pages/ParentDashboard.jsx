@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { linkParentToChild, getLinkedChildren, getChildStats, updateUserPlan } from '../services/supabase'
+import { linkParentToChild, getLinkedChildren, getChildStats, getKnowledgeGraph, getProfile } from '../services/supabase'
 import StatsCard from '../components/parent/StatsCard'
 import SubjectsList from '../components/parent/SubjectsList'
 import VictoriesJournal from '../components/parent/VictoriesJournal'
@@ -16,6 +16,8 @@ export default function ParentDashboard() {
   const [children, setChildren]           = useState([])
   const [selectedChild, setSelectedChild] = useState(null)
   const [childStats, setChildStats]       = useState(null)
+  const [childProfile, setChildProfile]   = useState(null)
+  const [childKG, setChildKG]             = useState(null)
   const [loadingStats, setLoadingStats]   = useState(false)
   const [linkEmail, setLinkEmail]         = useState('')
   const [linkError, setLinkError]         = useState('')
@@ -40,8 +42,14 @@ export default function ParentDashboard() {
     setSelectedChild({ id: childId, ...childUser })
     setLoadingStats(true)
     try {
-      const stats = await getChildStats(childId)
-      setChildStats(stats)
+      const [stats, kg, prof] = await Promise.allSettled([
+        getChildStats(childId),
+        getKnowledgeGraph(childId),
+        getProfile(childId),
+      ])
+      if (stats.status === 'fulfilled') setChildStats(stats.value)
+      if (kg.status === 'fulfilled') setChildKG(kg.value)
+      if (prof.status === 'fulfilled') setChildProfile(prof.value)
     } catch (err) {
       console.error(err)
     } finally {
@@ -199,9 +207,42 @@ export default function ParentDashboard() {
             <LoadingSpinner />
           ) : childStats ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Streak + Points */}
+              {childProfile && (
+                <div style={{
+                  display: 'flex', gap: '12px',
+                  padding: '14px 18px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
+                }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--accent)' }}>
+                      🔥 {childProfile.streak ?? 0}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Jours consécutifs</div>
+                  </div>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--accent)' }}>
+                      {childProfile.points ?? 0}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Points accumulés</div>
+                  </div>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text)' }}>
+                      {childStats.sessions?.length ?? 0}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>Sessions (7j)</div>
+                  </div>
+                </div>
+              )}
               <StatsCard sessions={childStats.sessions} />
               <SubjectsList sessions={childStats.sessions} />
+              {/* Ratio participation */}
+              <ParticipationRatio victories={childStats.victories} />
               <VictoriesJournal victories={childStats.victories} />
+              {/* Knowledge Graph */}
+              {childKG && <KnowledgeGraphPanel kg={childKG} />}
             </div>
           ) : null}
         </div>
@@ -220,6 +261,69 @@ export default function ParentDashboard() {
           >
             + Lier un autre enfant
           </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ParticipationRatio({ victories }) {
+  if (!victories || victories.length === 0) return null
+  return (
+    <div style={{
+      padding: '14px 18px',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-md)',
+    }}>
+      <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>Activité</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7' }}>
+        <span style={{ color: 'var(--accent)', fontWeight: '600' }}>{victories.length}</span> victoire{victories.length > 1 ? 's' : ''} enregistrée{victories.length > 1 ? 's' : ''}.
+        {victories.length >= 3 && ' Bonne dynamique d\'apprentissage.'}
+        {victories.length < 3 && victories.length > 0 && ' Encouragez votre enfant à continuer !'}
+      </div>
+    </div>
+  )
+}
+
+function KnowledgeGraphPanel({ kg }) {
+  if (!kg) return null
+  const maitrisees = kg.notions_maitrisees || []
+  const enCours    = kg.notions_en_cours || []
+  const blocages   = kg.blocages_recurrents || []
+
+  if (maitrisees.length + enCours.length + blocages.length === 0) return null
+
+  return (
+    <div style={{
+      padding: '14px 18px',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-md)',
+    }}>
+      <div style={{ fontWeight: '600', marginBottom: '12px', fontSize: '14px' }}>Carte des notions</div>
+      {maitrisees.length > 0 && (
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '600', marginBottom: '4px' }}>✓ Maîtrisées</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.8' }}>
+            {maitrisees.slice(-8).join(' · ')}
+          </div>
+        </div>
+      )}
+      {enCours.length > 0 && (
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-2)', fontWeight: '600', marginBottom: '4px' }}>~ En cours</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.8' }}>
+            {enCours.slice(-5).join(' · ')}
+          </div>
+        </div>
+      )}
+      {blocages.length > 0 && (
+        <div>
+          <div style={{ fontSize: '12px', color: 'var(--error)', fontWeight: '600', marginBottom: '4px' }}>⚠ Points de blocage</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.8' }}>
+            {blocages.slice(-5).join(' · ')}
+          </div>
         </div>
       )}
     </div>
