@@ -24,9 +24,11 @@ export default function Landing() {
         <HeroSection toSignup={toSignup} toParent={toParent} />
         <ProblemSection />
         <SolutionSection />
+        <AvatarsSection toSignup={toSignup} />
         <ChatDemoSection />
         <TestimonialsSection />
         <PricingSection toSignup={toSignup} />
+        <CTAFinalSection toSignup={toSignup} />
         <LandingFooter />
       </div>
     </div>
@@ -214,25 +216,31 @@ function ProblemSection() {
 
 // ─── 3. Solution ──────────────────────────────────────────────────────────────
 
-function SolutionSection() {
-  const steps = [
-    {
-      num: '01', icon: '🧠', tag: 'Science cognitive',
-      title: 'Profil cognitif',
-      desc: 'En quelques minutes de conversation naturelle, Maya détecte si ton cerveau est visuel, auditif ou kinesthésique — et bien plus encore.',
-    },
-    {
-      num: '02', icon: '🎯', tag: 'Personnalisé',
-      title: 'Stratégies sur-mesure',
-      desc: 'Chaque explication, chaque exercice, chaque mémo-technique est adapté à TA façon de penser. Pas un copier-coller générique.',
-    },
-    {
-      num: '03', icon: '📈', tag: 'Résultats',
-      title: 'Progrès concrets',
-      desc: 'Apprendre avec sa méthode naturelle, ça change tout. Les élèves retiennent plus vite, restent motivés, et voient leurs notes grimper.',
-    },
-  ]
+const VAK_PROFILES = [
+  {
+    icon: '👁️', tag: 'Visuel',
+    title: 'Tu penses en images',
+    traits: ['Tu retiens mieux avec des schémas', 'Tu visualises les scènes dans ta tête', 'Les couleurs et les cartes t\'aident'],
+    example: '"Imagine une frise chronologique colorée — chaque événement a sa couleur."',
+    color: '#3B82F6',
+  },
+  {
+    icon: '👂', tag: 'Auditif',
+    title: 'Tu penses en sons',
+    traits: ['Tu retiens mieux en lisant à voix haute', 'Les rythmes et rimes t\'aident', 'Tu aimes les explications parlées'],
+    example: '"Répète cette formule en rythme — comme un refrain que tu ne peux plus sortir de ta tête."',
+    color: '#F59E0B',
+  },
+  {
+    icon: '🤝', tag: 'Kinesthésique',
+    title: 'Tu penses par le ressenti',
+    traits: ['Tu retiens mieux en faisant', 'Les exemples concrets t\'ancrent', 'Tu as besoin de bouger pour apprendre'],
+    example: '"Mime la réaction chimique avec tes mains — ton corps va mémoriser à ta place."',
+    color: '#EC4899',
+  },
+]
 
+function SolutionSection() {
   return (
     <section style={{ padding: 'clamp(60px, 9vw, 100px) 32px', maxWidth: '1100px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '56px' }}>
@@ -244,19 +252,20 @@ function SolutionSection() {
           fontFamily: 'var(--f-title)', fontWeight: '800',
           fontSize: 'clamp(24px, 3.5vw, 44px)', lineHeight: '1.15', maxWidth: '640px', margin: '0 auto',
         }}>
-          On part de là où <span style={{ color: 'var(--accent)' }}>personne ne commence</span> vraiment
+          Ton cerveau a un mode d'emploi.<br />
+          <span style={{ color: 'var(--accent)' }}>On le trouve ensemble.</span>
         </h2>
         <p style={{
           color: 'var(--text-2)', fontSize: '17px', marginTop: '16px', lineHeight: '1.7',
           maxWidth: '480px', margin: '16px auto 0',
         }}>
-          Comment ton cerveau fonctionne. Pas ce que tu sais déjà.
-          Pas ce que tu dois réviser. Comment <em>toi</em> tu apprends.
+          Visuel, auditif ou kinesthésique — chaque profil apprend différemment.
+          Evokia détecte le tien et adapte chaque explication en conséquence.
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-        {steps.map((s, i) => (
+        {VAK_PROFILES.map((p, i) => (
           <div key={i}
             style={{
               background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -265,8 +274,8 @@ function SolutionSection() {
               transition: 'border-color 0.2s, box-shadow 0.2s',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = 'var(--border-h)'
-              e.currentTarget.style.boxShadow = 'var(--glow)'
+              e.currentTarget.style.borderColor = p.color + '66'
+              e.currentTarget.style.boxShadow = `0 0 24px ${p.color}22`
             }}
             onMouseLeave={e => {
               e.currentTarget.style.borderColor = 'var(--border)'
@@ -275,22 +284,29 @@ function SolutionSection() {
           >
             <div style={{
               position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
-              background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
+              background: `linear-gradient(90deg, transparent, ${p.color}, transparent)`,
             }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
-              <span style={{ fontSize: '34px' }}>{s.icon}</span>
-              <span style={{
-                fontFamily: 'var(--f-title)', fontSize: '52px', fontWeight: '800',
-                color: 'rgba(29,158,117,0.12)', lineHeight: '1',
-              }}>{s.num}</span>
-            </div>
+            <div style={{ fontSize: '36px', marginBottom: '16px' }}>{p.icon}</div>
             <span style={{
-              display: 'inline-block', background: 'var(--accent-dim)', color: 'var(--accent)',
+              display: 'inline-block', background: p.color + '22', color: p.color,
               fontSize: '11px', fontWeight: '700', letterSpacing: '0.07em', textTransform: 'uppercase',
-              padding: '3px 10px', borderRadius: '6px', marginBottom: '12px',
-            }}>{s.tag}</span>
-            <h3 style={{ fontFamily: 'var(--f-title)', fontSize: '20px', marginBottom: '12px' }}>{s.title}</h3>
-            <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.75' }}>{s.desc}</p>
+              padding: '3px 10px', borderRadius: '6px', marginBottom: '14px',
+            }}>{p.tag}</span>
+            <h3 style={{ fontFamily: 'var(--f-title)', fontSize: '20px', marginBottom: '14px' }}>{p.title}</h3>
+            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              {p.traits.map((t, j) => (
+                <li key={j} style={{ fontSize: '14px', color: 'var(--text-2)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <span style={{ color: p.color, flexShrink: 0 }}>✓</span>{t}
+                </li>
+              ))}
+            </ul>
+            <div style={{
+              background: 'var(--bg)', border: `1px solid ${p.color}33`,
+              borderRadius: 'var(--r-md)', padding: '12px 14px',
+              fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic', lineHeight: '1.6',
+            }}>
+              {p.example}
+            </div>
           </div>
         ))}
       </div>
@@ -390,6 +406,109 @@ function ChatDemoSection() {
             </div>
           )}
         </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── 4b. Avatars ──────────────────────────────────────────────────────────────
+
+const AVATARS = [
+  {
+    name: 'Max', emoji: '🔵', profil: 'Visuel',
+    desc: 'Max raisonne en images et en schémas. Il transforme chaque concept abstrait en carte mentale ou frise visuelle.',
+    style: 'Direct, précis, organisé.',
+    color: '#3B82F6',
+  },
+  {
+    name: 'Victor', emoji: '🟡', profil: 'Auditif',
+    desc: 'Victor pense à voix haute. Il explique par des formules rythmées, des analogies sonores et des récits logiques.',
+    style: 'Narratif, méthodique, pédagogue.',
+    color: '#F59E0B',
+  },
+  {
+    name: 'Léo', emoji: '🟢', profil: 'Kinesthésique',
+    desc: 'Léo apprend en faisant. Il ancre les notions dans des exemples concrets, des gestes et des mises en situation réelles.',
+    style: 'Concret, dynamique, hands-on.',
+    color: '#22C55E',
+  },
+]
+
+function AvatarsSection({ toSignup }) {
+  return (
+    <section style={{
+      background: 'var(--bg-card)',
+      borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
+      padding: 'clamp(60px, 9vw, 100px) 32px',
+    }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+          <p style={{
+            color: 'var(--accent)', fontWeight: '700', fontSize: '12px',
+            letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px',
+          }}>Tes tuteurs</p>
+          <h2 style={{
+            fontFamily: 'var(--f-title)', fontWeight: '800',
+            fontSize: 'clamp(24px, 3.5vw, 44px)', lineHeight: '1.15',
+          }}>
+            7 avatars, <span style={{ color: 'var(--accent)' }}>un seul te correspond</span>
+          </h2>
+          <p style={{
+            color: 'var(--text-2)', fontSize: '17px', marginTop: '16px', lineHeight: '1.7',
+            maxWidth: '480px', margin: '16px auto 0',
+          }}>
+            Dr Mind analyse ton profil et t'attribue automatiquement l'avatar qui parle vraiment comme ton cerveau pense.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '40px' }}>
+          {AVATARS.map((a, i) => (
+            <div key={i} style={{
+              background: 'var(--bg)', border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xl)', padding: '32px 28px',
+              position: 'relative', overflow: 'hidden',
+              transition: 'border-color 0.2s, box-shadow 0.2s',
+            }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = a.color + '66'
+                e.currentTarget.style.boxShadow = `0 0 24px ${a.color}22`
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                background: `linear-gradient(90deg, transparent, ${a.color}, transparent)`,
+              }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px' }}>
+                <div style={{
+                  width: '52px', height: '52px', borderRadius: '16px',
+                  background: a.color + '22', border: `1px solid ${a.color}55`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '26px',
+                }}>
+                  {a.emoji}
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'var(--f-title)', fontWeight: '800', fontSize: '20px' }}>{a.name}</div>
+                  <div style={{
+                    display: 'inline-block', background: a.color + '22', color: a.color,
+                    fontSize: '11px', fontWeight: '700', letterSpacing: '0.07em', textTransform: 'uppercase',
+                    padding: '2px 8px', borderRadius: '6px', marginTop: '4px',
+                  }}>{a.profil}</div>
+                </div>
+              </div>
+              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.75', marginBottom: '14px' }}>{a.desc}</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', fontStyle: 'italic' }}>{a.style}</p>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ textAlign: 'center', fontSize: '14px', color: 'var(--text-3)' }}>
+          + 4 autres avatars pour les profils mixtes — Maya (V+A), Noa (V+K), Sam (A+K), Alex (équilibré)
+        </p>
       </div>
     </section>
   )
@@ -564,7 +683,54 @@ function PricingSection({ toSignup }) {
   )
 }
 
-// ─── 7. Footer ────────────────────────────────────────────────────────────────
+// ─── 7. CTA Final ─────────────────────────────────────────────────────────────
+
+function CTAFinalSection({ toSignup }) {
+  return (
+    <section style={{
+      padding: 'clamp(70px, 10vw, 110px) 32px',
+      maxWidth: '860px', margin: '0 auto',
+      textAlign: 'center',
+    }}>
+      <p style={{
+        color: 'var(--accent)', fontWeight: '700', fontSize: '12px',
+        letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '20px',
+      }}>Prêt·e ?</p>
+      <h2 style={{
+        fontFamily: 'var(--f-title)', fontWeight: '800',
+        fontSize: 'clamp(28px, 4vw, 52px)', lineHeight: '1.15',
+        marginBottom: '20px',
+      }}>
+        Découvre comment <span style={{ color: 'var(--accent)' }}>ton cerveau</span><br />
+        apprend vraiment.
+      </h2>
+      <p style={{
+        color: 'var(--text-2)', fontSize: 'clamp(15px, 2vw, 18px)', lineHeight: '1.75',
+        maxWidth: '480px', margin: '0 auto 36px',
+      }}>
+        5 minutes pour que Dr Mind te découvre. Gratuit, sans carte bancaire.
+      </p>
+      <button onClick={toSignup} style={{
+        padding: '16px 40px',
+        background: 'var(--accent)', color: '#080D0A',
+        border: 'none', borderRadius: 'var(--r-md)',
+        fontSize: '17px', fontWeight: '700', cursor: 'pointer',
+        fontFamily: 'var(--f-body)', transition: 'background 0.15s',
+        letterSpacing: '-0.01em',
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-h)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+      >
+        Essayer gratuitement →
+      </button>
+      <p style={{ marginTop: '14px', fontSize: '13px', color: 'var(--text-3)' }}>
+        ✓ Sans engagement · ✓ 5 min pour démarrer · ✓ Données protégées RGPD
+      </p>
+    </section>
+  )
+}
+
+// ─── 8. Footer ────────────────────────────────────────────────────────────────
 
 function LandingFooter() {
   return (
