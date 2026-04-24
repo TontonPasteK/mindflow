@@ -47,12 +47,19 @@ function parseTags(content) {
     text = text.replace(notifyMatch[0], '').trim()
   }
 
-  return { text, profileData, strategies, victory, notifyParents }
+  // [[SEANCE_COMPLETE]]
+  let seanceComplete = false
+  if (text.includes('[[SEANCE_COMPLETE]]')) {
+    seanceComplete = true
+    text = text.replace('[[SEANCE_COMPLETE]]', '').trim()
+  }
+
+  return { text, profileData, strategies, victory, notifyParents, seanceComplete }
 }
 
 const BLOCAGE_KEYWORDS = ['je sais pas', 'j\'sais pas', 'aucune idée', 'je comprends pas', 'je comprends rien']
 
-export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance = 1, matiere = 'general' }) {
+export function useChat({ onProfile, onVictory, onTTS, onSeanceComplete, mode = 'session', seance = 1, matiere = 'general' }) {
   const { user, profile, isPremium, refreshProfile } = useAuth()
   const { sessionId, addExchange, addMatiere, persistMessage } = useSession()
 
@@ -232,7 +239,7 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
         historyRef.current[historyRef.current.length - 1] = { role: 'user', content: ref }
       }
 
-      const { text, profileData, strategies, victory, notifyParents } = parseTags(rawResponse)
+      const { text, profileData, strategies, victory, notifyParents, seanceComplete } = parseTags(rawResponse)
 
       const assistantMsg = addMessage('assistant', text, { strategies, id: msgId })
       historyRef.current = [...historyRef.current, { role: 'assistant', content: text }].slice(-maxHistory)
@@ -252,6 +259,11 @@ export function useChat({ onProfile, onVictory, onTTS, mode = 'session', seance 
         })
         await refreshProfile()
         onProfile(profileData)
+      }
+
+      // Séance Dr Mind complète
+      if (seanceComplete && onSeanceComplete) {
+        onSeanceComplete()
       }
 
       // Notification parents

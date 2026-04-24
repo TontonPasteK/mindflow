@@ -35,6 +35,10 @@ export default function DrMind() {
         setTimeout(() => navigate('/choice?drMind=seance1'), 2500)
       }
     },
+    onSeanceComplete: () => {
+      setProfileDetected(true)
+      setTimeout(() => navigate('/session?mode=premium'), 3000)
+    },
     onTTS: null,
   })
 
