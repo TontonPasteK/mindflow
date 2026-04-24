@@ -123,7 +123,7 @@ export function useChat({ onProfile, onVictory, onTTS, onSeanceComplete, mode = 
             rawText = await callAIStream(systemPrompt, historyRef.current, (sentence) => {
               earlyTtsSentence = sentence
               if (onTTSRef.current) onTTSRef.current(sentence, msgId)
-            }, user?.id)
+            }, user?.id, user?.prenom, matiereRef.current)
             break
           } catch (err) {
             if (attempt <= 3 && err.message?.includes('Overloaded')) {
@@ -158,7 +158,7 @@ export function useChat({ onProfile, onVictory, onTTS, onSeanceComplete, mode = 
         let rawText
         for (let attempt = 1; attempt <= 4; attempt++) {
           try {
-            rawText = await callAIStream(systemPrompt, historyRef.current, () => {}, user?.id)
+            rawText = await callAIStream(systemPrompt, historyRef.current, () => {}, user?.id, user?.prenom, matiereRef.current)
             break
           } catch (err) {
             if (attempt <= 3 && err.message?.includes('Overloaded')) {
@@ -231,7 +231,7 @@ export function useChat({ onProfile, onVictory, onTTS, onSeanceComplete, mode = 
       const rawResponse = await callAIStream(systemPrompt, historyRef.current, (sentence) => {
         earlyTtsSentence = sentence
         if (onTTSRef.current) onTTSRef.current(sentence, msgId)
-      }, user?.id)
+      }, user?.id, user?.prenom, matiereRef.current)
 
       if (fileData) {
         const ref = (fileData.mimeType === 'application/pdf' ? '[PDF envoyé]' : '[Image envoyée]') +
@@ -377,11 +377,11 @@ function assignAvatar(profileData) {
 }
 
 // ─── Streaming API ────────────────────────────────────────────────────────────
-async function callAIStream(systemPrompt, messages, onFirstSentence, userId) {
+async function callAIStream(systemPrompt, messages, onFirstSentence, userId, userName, subject) {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ systemPrompt, messages, stream: true, userId }),
+    body: JSON.stringify({ systemPrompt, messages, stream: true, userId, userName, subject }),
   })
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))

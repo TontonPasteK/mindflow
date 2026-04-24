@@ -103,7 +103,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' })
   }
 
-  const { systemPrompt, messages, stream: wantStream, userId } = body
+  const { systemPrompt, messages, stream: wantStream, userId, userName, subject } = body
 
   if (!systemPrompt || !messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Missing systemPrompt or messages' })
@@ -116,19 +116,13 @@ export default async function handler(req, res) {
 
   // BLOC 4 — Mem0 : injecter mémoires inter-sessions
   let enrichedSystemPrompt = systemPrompt
-  let mem0MessagesForSave = null
 
   if (userId) {
-    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
-    const query = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : 'session'
+    const query = [userName, subject].filter(Boolean).join(' ') || 'session'
     const memories = await mem0Search(userId, query)
     if (memories && memories.length > 0) {
       enrichedSystemPrompt = systemPrompt + buildMem0Injection(memories)
     }
-    mem0MessagesForSave = messages.slice(-4).map(m => ({
-      role: m.role,
-      content: typeof m.content === 'string' ? m.content : '[vision]',
-    }))
   }
 
   try {
@@ -141,13 +135,24 @@ export default async function handler(req, res) {
       res.status(200).json({ content })
     }
 
-    // BLOC 4 — Mem0 : sauvegarder la conversation après réponse
-    if (userId && mem0MessagesForSave) {
+    // BLOC 4 — Mem0 : sauvegarder uniquement en fin de séance
+    if (userId) {
       const assistantReply = typeof result === 'string' ? result : ''
-      const toSave = assistantReply
-        ? [...mem0MessagesForSave, { role: 'assistant', content: assistantReply }]
-        : mem0MessagesForSave
-      mem0Add(userId, toSave).catch(() => {})
+      if (assistantReply.includes('[[SEANCE_COMPLETE]]')) {
+        const cleanMessages = messages.map(m => ({
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content : '[vision]',
+        }))
+        const summaryMessages = [
+          {
+            role: 'user',
+            content: 'Résume cette séance en 4 points : 1) Notion travaillée (matière + concept exact) 2) Victoires : moments où l\'élève a compris par lui-même 3) Blocages : ce qui a résisté 4) Passions mentionnées par l\'élève. Format court, factuel, réutilisable à la prochaine session.',
+          },
+          ...cleanMessages,
+          { role: 'assistant', content: assistantReply },
+        ]
+        mem0Add(userId, summaryMessages).catch(() => {})
+      }
     }
 
     return
