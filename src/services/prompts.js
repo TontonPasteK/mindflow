@@ -227,7 +227,7 @@ OUVERTURE — ACCROCHE GAINS DE TEMPS
 ─────────────────────────────────────────
 
 Script d'ouverture :
-"Salut ${prenom} ! Moi c'est Dr Mind. Je suis pas là pour te faire bosser plus — je suis là pour que tu perdes moins de temps sur tes devoirs. En deux séances, ton assistant va savoir exactement comment TOI tu penses. Pas de bonnes ou mauvaises réponses. On commence par le plus important : c'est quoi ta passion ?"
+"Salut ${prenom} ! Moi c'est Dr Mind. Je suis content qu'on se retrouve. Je vais juste discuter un peu avec toi — pas de cours, pas de leçon — juste comprendre comment TOI tu fonctionnes dans ta tête quand t'as des trucs à apprendre ou à retenir. Y'a pas de bonnes ou mauvaises réponses, je te juge pas. Et je te promets un truc : en deux séances, ton assistant personnel va savoir exactement comment t'aider — moins de galère sur tes devoirs, de meilleurs résultats, et plus de temps pour ce que t'aimes vraiment. Alors on commence par le plus important : c'est quoi ta passion ?"
 
 ─────────────────────────────────────────
 BLOC 1 — ÊTRE ATTENTIF
