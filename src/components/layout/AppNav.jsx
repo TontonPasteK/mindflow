@@ -27,7 +27,7 @@ export default function AppNav() {
         color: 'var(--accent)',
         letterSpacing: '-0.01em',
       }}>
-        MindFlow
+        Evokia
       </span>
 
       <button

@@ -239,7 +239,7 @@ function SolutionSection() {
         <p style={{
           color: 'var(--accent)', fontWeight: '700', fontSize: '12px',
           letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px',
-        }}>La méthode MindFlow</p>
+        }}>La méthode Evokia</p>
         <h2 style={{
           fontFamily: 'var(--f-title)', fontWeight: '800',
           fontSize: 'clamp(24px, 3.5vw, 44px)', lineHeight: '1.15', maxWidth: '640px', margin: '0 auto',
@@ -413,7 +413,7 @@ const TESTIMONIALS = [
   {
     initials: 'SB', color: '#EC4899',
     name: 'Sophie B.', role: 'Maman de Léa, CM2',
-    quote: 'Ma fille avait honte de ne pas comprendre. Elle se cachait en classe. Depuis MindFlow, elle attend ses sessions avec impatience. Ce changement d\'attitude, c\'est inestimable.',
+    quote: 'Ma fille avait honte de ne pas comprendre. Elle se cachait en classe. Depuis Evokia, elle attend ses sessions avec impatience. Ce changement d\'attitude, c\'est inestimable.',
     before: '11/20', after: '16/20', subject: 'Français',
   },
 ]
@@ -579,7 +579,7 @@ function LandingFooter() {
       }}>
         <Logo />
         <p style={{ fontSize: '13px', color: 'var(--text-3)' }}>
-          MindFlow © 2026 — Tous droits réservés
+          Evokia © 2026 — Tous droits réservés
         </p>
         <div style={{ display: 'flex', gap: '20px' }}>
           {['Confidentialité', 'CGU'].map(label => (
@@ -608,7 +608,7 @@ function Logo() {
         </svg>
       </div>
       <span style={{ fontFamily: 'var(--f-title)', fontWeight: '800', fontSize: '20px', letterSpacing: '-0.02em' }}>
-        MindFlow
+        Evokia
       </span>
     </div>
   )

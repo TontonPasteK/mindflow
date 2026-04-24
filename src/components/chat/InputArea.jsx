@@ -1,8 +1,15 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
-export default function InputArea({ onSend, disabled, placeholder = 'Écris ta question...' }) {
+export default function InputArea({ onSend, disabled, placeholder = 'Écris ta réponse...' }) {
   const [value, setValue] = useState('')
   const textareaRef = useRef(null)
+
+  // Focus automatique dès que disabled passe à false (Dr Mind a fini de répondre)
+  useEffect(() => {
+    if (!disabled && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [disabled])
 
   const handleSend = () => {
     const trimmed = value.trim()
@@ -23,7 +30,6 @@ export default function InputArea({ onSend, disabled, placeholder = 'Écris ta q
 
   const handleInput = (e) => {
     setValue(e.target.value)
-    // Auto-resize
     const el = textareaRef.current
     if (el) {
       el.style.height = 'auto'
@@ -67,7 +73,6 @@ export default function InputArea({ onSend, disabled, placeholder = 'Écris ta q
         onFocus={e => e.target.style.borderColor = 'var(--accent)'}
         onBlur={e => e.target.style.borderColor = 'var(--border)'}
       />
-
       <button
         onClick={handleSend}
         disabled={!value.trim() || disabled}

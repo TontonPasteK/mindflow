@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import MessageBubble from './MessageBubble'
 import TypingIndicator from './TypingIndicator'
 
-export default function ChatInterface({ messages, loading, speakingMessageId, ttsEnabled }) {
+export default function ChatInterface({ messages, loading, speakingMessageId, ttsEnabled, avatarName = 'Dr Mind' }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export default function ChatInterface({ messages, loading, speakingMessageId, tt
           isSpeaking={msg.id === speakingMessageId}
           isLatestAssistant={msg.role === 'assistant' && i === messages.length - 1}
           ttsEnabled={ttsEnabled}
+          avatarName={avatarName}
         />
       ))}
       {loading && <TypingIndicator />}

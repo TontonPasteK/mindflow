@@ -112,7 +112,7 @@ export default function Auth() {
           <p style={{ color: 'var(--text-2)', fontSize: '14px' }}>
             {mode === 'signup'
               ? 'Gratuit pour commencer'
-              : 'Connecte-toi à ton espace MindFlow'}
+              : 'Connecte-toi à ton espace Evokia'}
           </p>
         </div>
 

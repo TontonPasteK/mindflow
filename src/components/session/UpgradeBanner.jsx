@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export default function UpgradeBanner({ visible }) {
+export default function UpgradeBanner({ visible, avatarName = 'Dr Mind' }) {
   const navigate = useNavigate()
 
   if (!visible) return null
@@ -26,10 +26,10 @@ export default function UpgradeBanner({ visible }) {
           margin: '0 0 2px',
           fontFamily: 'var(--f-title)',
         }}>
-          Maya peut aller beaucoup plus loin avec toi
+          {avatarName} peut aller beaucoup plus loin avec toi
         </p>
         <p style={{ fontSize: '12px', color: 'var(--text-2)', margin: 0 }}>
-          Profil cognitif complet · Stratégies sur-mesure · Voix naturelle
+          Profil cognitif complet · Stratégies sur-mesure · Avatar personnalisé
         </p>
       </div>
       <button

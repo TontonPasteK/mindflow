@@ -1,23 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import StrategyCard from './StrategyCard'
 
-// ~150 WPM (ms between each revealed word)
 const MS_PER_WORD = 400
 
-export default function MessageBubble({ role, content, strategies, fileAttachment, isSpeaking, isLatestAssistant, ttsEnabled }) {
+export default function MessageBubble({ role, content, strategies, fileAttachment, isSpeaking, isLatestAssistant, ttsEnabled, avatarName = 'Dr Mind' }) {
   const isMax = role === 'assistant'
 
-  // Hide text until TTS fires only when TTS is actually enabled
   const shouldAnimate = isMax && isLatestAssistant && ttsEnabled
 
-  // Word-by-word animation: runs when TTS playback starts for this message
   const [visibleCount, setVisibleCount] = useState(
     shouldAnimate ? 0 : Infinity
   )
-  const animRef  = useRef(null)
+  const animRef    = useRef(null)
   const startedRef = useRef(false)
 
-  // Trigger animation when isSpeaking becomes true (audio actually started)
   useEffect(() => {
     if (!isMax || !isSpeaking || !shouldAnimate || startedRef.current) return
     startedRef.current = true
@@ -40,7 +36,6 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
     }
   }, [isSpeaking]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When speaking ends, ensure full text is shown
   useEffect(() => {
     if (!isSpeaking && startedRef.current) {
       if (animRef.current) {
@@ -51,7 +46,6 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
     }
   }, [isSpeaking])
 
-  // Fallback: if TTS never fires within 3s (network error etc.), show text
   useEffect(() => {
     if (!shouldAnimate) return
     const fallback = setTimeout(() => {
@@ -60,8 +54,8 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
     return () => clearTimeout(fallback)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const words        = content ? content.split(' ') : []
-  const displayText  = isMax && visibleCount < words.length
+  const words       = content ? content.split(' ') : []
+  const displayText = isMax && visibleCount < words.length
     ? words.slice(0, visibleCount).join(' ')
     : content
 
@@ -81,7 +75,7 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
           paddingLeft: '4px',
-        }}>Maya</span>
+        }}>{avatarName}</span>
       )}
 
       <div style={{
@@ -96,7 +90,6 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
         fontSize: '15px',
         lineHeight: '1.65',
       }}>
-        {/* File attachment badge */}
         {fileAttachment && (
           <div style={{
             display: 'inline-flex',
@@ -125,20 +118,19 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
                 <polyline points="21 15 16 10 5 21"/>
               </svg>
             )}
-            {fileAttachment.mimeType === 'application/pdf' ? 'PDF envoyé à Maya' : 'Image envoyée à Maya'}
+            {fileAttachment.mimeType === 'application/pdf'
+              ? `PDF envoyé à ${avatarName}`
+              : `Image envoyée à ${avatarName}`}
           </div>
         )}
 
-        {/* Message text — hidden until TTS fires for latest message */}
         {displayText ? (
           <div>{displayText}</div>
         ) : isMax && visibleCount === 0 ? (
-          // Waiting for TTS to start — show subtle cursor
           <div style={{ color: 'var(--accent)', opacity: 0.6 }}>▌</div>
         ) : null}
       </div>
 
-      {/* Strategy cards from [[STRATEGIES:...]] */}
       {strategies && strategies.length > 0 && (
         <div style={{
           display: 'flex',

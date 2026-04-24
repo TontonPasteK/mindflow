@@ -129,7 +129,7 @@ export default function ParentDashboard() {
             Lier le compte de votre enfant
           </h2>
           <p style={{ color: 'var(--text-2)', fontSize: '14px', marginBottom: '20px' }}>
-            Entrez l'email du compte MindFlow de votre enfant pour voir ses statistiques.
+            Entrez l'email du compte Evokia de votre enfant pour voir ses statistiques.
           </p>
           <form onSubmit={handleLink} style={{ display: 'flex', gap: '12px' }}>
             <div style={{ flex: 1 }}>

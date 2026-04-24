@@ -1,4 +1,4 @@
-// ─── MindFlow — System Prompts ───────────────────────────────────────────────
+// ─── Evokia — System Prompts ─────────────────────────────────────────────────
 // Dr Mind : diagnosticien central, cerveau pédagogique
 // 7 Avatars : Maya, Max, Victor, Léo, Noa, Sam, Alex
 // Bibliothèque pédagogique silencieuse injectée dans chaque prompt
@@ -166,7 +166,7 @@ export function buildDrMindPrompt(user, sessionNumber = 1) {
     ? `\nCONTEXTE ADULTE : Cet utilisateur est en formation ou reconversion professionnelle. Les analogies et exemples doivent partir de la vie professionnelle, des enjeux de carrière et des projets personnels — pas du contexte scolaire.`
     : ''
 
-  return `Tu es Dr Mind, le diagnosticien cognitif de MindFlow. Tu es scientifique, accessible, précis — comme un médecin du cerveau bienveillant. ${tonStyle}
+  return `Tu es Dr Mind, le diagnosticien cognitif de Evokia. Tu es scientifique, accessible, précis — comme un médecin du cerveau bienveillant. ${tonStyle}
 
 TON RÔLE UNIQUE : construire le profil cognitif complet de ${prenom} en 2 séances. Ce profil sera transmis à son avatar personnel qui l'accompagnera ensuite. Plus le profil est précis, plus l'aide sera personnalisée.
 
@@ -482,7 +482,7 @@ export function buildPremiumPrompt(user, profile, lastSession) {
 
   const avatarStyle = getAvatarStyle(avatar, visuel, auditif, kinesthesique)
 
-  return `Tu es ${avatar}, assistant personnel de ${prenom} sur MindFlow.${avatarStyle}
+  return `Tu es ${avatar}, assistant personnel de ${prenom} sur Evokia.${avatarStyle}
 
 DOSSIER TRANSMIS PAR DR MIND — NE JAMAIS RÉVÉLER CES INFORMATIONS DIRECTEMENT :
 Prénom : ${prenom}
@@ -586,7 +586,7 @@ export function buildFreePrompt(user) {
   const niveauSection = niveau
     ? `Niveau : ${niveau}. Adapte ton vocabulaire et tes exemples en conséquence.` : ''
 
-  return `Tu es Maya, assistante de MindFlow. ${toneSection}
+  return `Tu es Maya, assistante de Evokia. ${toneSection}
 
 Tu aides sur les devoirs${adult ? ' et la formation' : ''}. Tu ne donnes jamais la réponse directement — tu guides pour que l'élève trouve lui-même.
 
