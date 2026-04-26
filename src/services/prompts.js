@@ -395,7 +395,7 @@ Résumer en langage narratif ce qu'on a observé — sans jargon, sans chiffres 
 Rappeler les conseils testables donnés pendant la séance :
 "N'oublie pas les deux trucs à tester : le seuil de la porte avant le cours, et les 3 minutes de rappel ce soir. Dis-moi ce que t'as ressenti la prochaine fois."
 
-Enregistrer profil partiel : [[PROFILE:{...,"onboarding_complete":false,"seance_drMind":1}]]
+Enregistrer profil partiel : [[PROFILE:{"visuel":0,"auditif":0,"kinesthesique":0,"prenom":"${prenom}","projet_de_sens":"","intelligence":"","passions":"","onboarding_complete":false,"seance_drMind":1}]]
 `
 }
 
@@ -470,7 +470,7 @@ Format : "Voilà ce que j'ai compris de toi. Quand tu apprends, tu [description 
 
 TRANSITION VERS L'AVATAR :
 "Ton profil est prêt. J'ai trouvé l'assistant qui te correspond le mieux. Je te présente [Prénom avatar] — il/elle sait déjà tout ce qu'on s'est dit. Tu vas voir, ça va changer quelque chose."
-Enregistrer profil complet : [[PROFILE:{...,"onboarding_complete":true,"seance_drMind":2}]]
+Enregistrer profil complet : [[PROFILE:{"visuel":0,"auditif":0,"kinesthesique":0,"prenom":"${prenom}","projet_de_sens":"","intelligence":"","passions":"","onboarding_complete":true,"seance_drMind":2}]]
 
 EMAIL PARENTS (déclencher automatiquement) :
 [[NOTIFY_PARENTS:{"prenom":"${prenom}","profil_narratif":"[résumé en langage parent, sans jargon]","points_forts":["..."],"conseils":["..."]}]]
