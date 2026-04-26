@@ -88,7 +88,7 @@ export function AuthProvider({ children }) {
     profile,
     loading,
     plan: user?.plan === 'premium' ? 'premium' : 'free',
-    isPremium: user?.plan === 'premium',
+    isPremium: true, // TEMPORAIRE : tous les comptes sont premium pour tester
     isParent: role === 'parent',
     isEleve: role === 'eleve',
     role,
