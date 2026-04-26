@@ -62,6 +62,7 @@ export default function Session() {
 
   // Chat hook — passe matière pour BLOC 2+3
   const { messages, loading, error, retryStatus, sendMessage, initChat } = useChat({
+    mode: 'session',
     onVictory: (v) => {
       setNewVictory(v)
       setRecentVictories(prev => [v, ...prev].slice(0, 5))
