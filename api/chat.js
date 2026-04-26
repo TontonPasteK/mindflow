@@ -3,6 +3,13 @@
  * POST body: { systemPrompt, messages, stream?, userId? }
  */
 
+import { createClient } from '@supabase/supabase-js'
+
+// ─── Supabase client (server-side) ───────────────────────────────────────────────
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
+
 // ─── Mem0 (BLOC 4) ────────────────────────────────────────────────────────────
 async function mem0Search(userId, query) {
   const key = process.env.MEM0_API_KEY
@@ -35,6 +42,49 @@ function buildMem0Injection(memories) {
   if (!memories || memories.length === 0) return ''
   const lines = memories.map(m => `- ${m.memory}`).join('\n')
   return `\nMÉMOIRE INTER-SESSIONS (Mem0) :\n${lines}`
+}
+
+// ─── Parse PROFILE balise ───────────────────────────────────────────────────────
+function parseProfileBalise(text) {
+  const match = text.match(/\[\[PROFILE:\s*(\{.*?\})\]\]/s)
+  if (!match) return null
+  try {
+    return JSON.parse(match[1])
+  } catch {
+    return null
+  }
+}
+
+// ─── Update profile on SEANCE_COMPLETE ───────────────────────────────────────────
+async function updateProfileOnSeanceComplete(userId, assistantReply) {
+  if (!supabase || !userId) return
+
+  const profileData = parseProfileBalise(assistantReply)
+  if (!profileData) return
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        avatar: profileData.avatar || 'Maya',
+        visuel: profileData.visuel ?? 0,
+        auditif: profileData.auditif ?? 0,
+        kinesthesique: profileData.kinesthesique ?? 0,
+        projet_de_sens: profileData.projet_de_sens || '',
+        intelligence_dominante: profileData.intelligence || '',
+        passions: profileData.passions || '',
+        onboarding_complete: true,
+        seance_drMind: 2,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('[chat API] updateProfile error:', error)
+    }
+  } catch (err) {
+    console.error('[chat API] updateProfile exception:', err.message)
+  }
 }
 
 // ─── Rate limiting (in-memory, per Vercel instance) ──────────────────────────
@@ -139,6 +189,9 @@ export default async function handler(req, res) {
     if (userId) {
       const assistantReply = typeof result === 'string' ? result : ''
       if (assistantReply.includes('[[SEANCE_COMPLETE]]')) {
+        // Mise à jour profil Supabase avec avatar attribué
+        await updateProfileOnSeanceComplete(userId, assistantReply)
+
         const cleanMessages = messages.map(m => ({
           role: m.role,
           content: typeof m.content === 'string' ? m.content : '[vision]',

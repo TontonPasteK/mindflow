@@ -1,0 +1,79 @@
+
+════════════════════════════════════════════════════════════════════════
+  MINDFLOW — BENCHMARK AUTOMATIQUE v1.0
+  19/04/2026 22:47:27  |  6 personas  |  6 tours chacun  |  Duree: 487s
+════════════════════════════════════════════════════════════════════════
+
+  TABLEAU COMPARATIF — SCORE PASTEK GLOBAL
+
+  Persona       Profil        Matiere              Pastek  Viol  Engagement  Progression  Methode
+  -----------------------------------------------------------------------------------------------
+  △  Ryan       V30/A10/K60    francais               6.60  ⚠   6         7.0          5.0      6.0
+  ✗  Camille    V45/A45/K10    physique-chimie        5.60      0         5.7          5.7      5.7
+  ✗  Marie      V40/A40/K20    sciences de la vie e   5.54      0         5.5          5.3      5.7
+  ✗  Lucas      V70/A20/K10    mathematiques          5.00      0         5.0          5.0      5.0
+  ✗  Ines       V30/A65/K5     histoire-geographie    5.00      0         5.0          5.0      5.0
+  ✗  Sofiane    V20/A30/K50    anglais                5.00      0         5.0          5.0      5.0
+
+────────────────────────────────────────────────────────────────────────
+
+  SCORES MOYENS GLOBAUX
+
+  Engagement          : ▓▓▓▓▓▓░░░░ 5.53/10  [min:5.0 max:7.0]  FAIBLE
+  Progression         : ▒▒▒▒▒░░░░░ 5.17/10  [min:5.0 max:5.7]  FAIBLE
+  Attention           : ▓▓▓▓▓▓░░░░ 5.67/10  [min:5.0 max:7.7]  FAIBLE
+  Methode globale     : ▒▒▒▒▒░░░░░ 5.39/10  [min:5.0 max:6.0]  FAIBLE
+  Tri selectif        : ▒▒▒▒▒░░░░░ 5.45/10  [min:5.0 max:6.5]  FAIBLE
+  Effet miroir        : ▓▓▓▓▓▓░░░░ 5.64/10  [min:5.0 max:7.5]  FAIBLE
+  Canal secondaire    : ▒▒▒▒▒░░░░░ 5.36/10  [min:5.0 max:6.5]  FAIBLE
+  Coherence passion   : ▒▒▒▒▒░░░░░ 5.45/10  [min:5.0 max:6.5]  FAIBLE
+
+  PASTEK GLOBAL MOYEN : ▒▒▒▒▒░░░░░ 5.46/10
+  VIOLATIONS TOTALES  : 6 sur 36 tours evalues
+
+────────────────────────────────────────────────────────────────────────
+
+  ANALYSE PAR CANAL DOMINANT
+
+  VISUEL          : Pastek moy 5.38/10 | Violations moy 0.0 | n=3
+  AUDITIF         : Pastek moy 5.00/10 | Violations moy 0.0 | n=1
+  KINESTHESIQUE   : Pastek moy 5.80/10 | Violations moy 3.0 | n=2
+
+────────────────────────────────────────────────────────────────────────
+
+  POINTS FAIBLES IDENTIFIES (criteres < 7.0)
+
+  ⚠  Engagement          : 5.53/10 — plus faible sur Lucas (5.0)
+  ⚠  Progression         : 5.17/10 — plus faible sur Ryan (5.0)
+  ⚠  Attention           : 5.67/10 — plus faible sur Lucas (5.0)
+  ⚠  Methode globale     : 5.39/10 — plus faible sur Lucas (5.0)
+  ⚠  Tri selectif        : 5.45/10 — plus faible sur Lucas (5.0)
+  ⚠  Effet miroir        : 5.64/10 — plus faible sur Lucas (5.0)
+  ⚠  Canal secondaire    : 5.36/10 — plus faible sur Lucas (5.0)
+  ⚠  Coherence passion   : 5.45/10 — plus faible sur Lucas (5.0)
+
+────────────────────────────────────────────────────────────────────────
+
+  TOP VIOLATIONS PASTEK
+
+  [ 1x] Pas de reformulation explicite avec les propres mots de (Ryan)
+  [ 1x] Tri sélectif incomplet : n'a pas vérifié si l'élève com (Ryan)
+  [ 1x] Progression logique fragile : passe à l'exercice sans c (Ryan)
+  [ 1x] pas_d_analogie_passion                                  (Ryan)
+  [ 1x] canal_secondaire_insuffisant_kinesthesique              (Ryan)
+  [ 1x] relance_abstraite_sans_ancrage_sensoriel                (Ryan)
+
+────────────────────────────────────────────────────────────────────────
+
+  RECOMMANDATIONS PROMPT
+
+  2. CANAL SECONDAIRE : score moyen 5.36/10 — insuffisant.
+     Ajouter instruction : nommer explicitement le canal active a chaque evocation.
+  3. COHERENCE PASSION : score moyen 5.45/10 — la passion est abandonnee en fin de session.
+     Appliquer REGLE B plus strictement : reinjecter toutes les 3 reponses.
+  4. RIGUEUR FINALE : methode globale 5.39/10.
+     REGLE C : les tours finaux sont de la consolidation, pas de la cloture.
+
+════════════════════════════════════════════════════════════════════════
+  Benchmark termine. 6 sessions | 6 tours | Duree: 487s | Violations: 6
+════════════════════════════════════════════════════════════════════════

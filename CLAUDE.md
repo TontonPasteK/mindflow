@@ -173,3 +173,15 @@ npx vercel --prod
 ## Règle d'évolution
 
 Quand Claude fait une erreur sur ce projet, mettre à jour ce CLAUDE.md avec la correction pour ne pas la reproduire.
+
+## Mise à jour état production (26/04/2026)
+Nouveau déployé : Mem0 branché (MEM0_API_KEY dans Vercel).
+Sauvegarde uniquement sur [[SEANCE_COMPLETE]] — résumé structuré.
+Query Mem0 = prénom + matière de l'élève.
+En attente : patch format 2 phrases max dans prompts.js,
+test visuel blocs 2-12, [[SEANCE_COMPLETE]] → transition avatar,
+renommage URL Vercel → evokia.
+
+## Récap automatique en début de session
+3 blocs : Ce qui est fait / En cours ou bloqué / Priorité suivante.
+Maximum 10 lignes. Puis : "On attaque quoi ?"

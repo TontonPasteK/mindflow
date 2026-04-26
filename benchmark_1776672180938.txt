@@ -1,0 +1,29 @@
+
+========================================================================
+  RAPPORT BENCHMARK
+========================================================================
+
+  SCORES PAR PERSONA (tries par Pastek)
+
+  Ines       V30/A65/K5     Pastek:XXXXXXXXXX58.23 Viol:  0 E:56.67 P:53.83 Miroir:62.5 Canal2:57
+  Ryan       V30/A10/K60    Pastek:XXXXXXXXXX40.00 Viol:  0 E:35 P:32.5 Miroir:44.17 Canal2:38
+  Sofiane    V20/A30/K50    Pastek:XXXXXXXXXX33.13 Viol:  0 E:31.67 P:29.17 Miroir:35 Canal2:32.83
+  Marie      V40/A40/K20    Pastek:XXXXXXXXXX15.83 Viol:  2 E:11.17 P:11.83 Miroir:18 Canal2:16.83
+  Lucas      V70/A20/K10    Pastek:XXXXXXXXXX14.50 Viol:  2 E:15 P:15.83 Miroir:17.5 Canal2:12.5
+  Camille    V45/A45/K10    Pastek:#######...6.57 Viol:  0 E:6.5 P:6.17 Miroir:6.83 Canal2:6.67
+
+  MOYENNES GLOBALES
+
+  Engagement      : 26.00/10  EXCELLENT
+  Progression     : 24.89/10  EXCELLENT
+  Methode         : 26.14/10  EXCELLENT
+  Tri selectif    : 27.42/10  EXCELLENT
+  Effet miroir    : 30.67/10  EXCELLENT
+  Canal2          : 27.30/10  EXCELLENT
+  Passion         : 28.70/10  EXCELLENT
+
+  PASTEK GLOBAL : 28.04/10 | VIOLATIONS : 4 | DUREE : 519s
+
+  POINTS FAIBLES (< 7.0)
+
+========================================================================

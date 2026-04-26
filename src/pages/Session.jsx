@@ -5,6 +5,7 @@ import { useSession } from '../context/SessionContext'
 import { useChat } from '../hooks/useChat'
 import { useVoice } from '../hooks/useVoice'
 import { useTTS } from '../hooks/useTTS'
+import { useAvatarTransition } from '../hooks/useAvatarTransition'
 import { getUserVictories, updateStreak } from '../services/supabase'
 
 import MaxAvatar      from '../components/avatar/MaxAvatar'
@@ -22,7 +23,7 @@ const MATIERES_OPTIONS = ['Général', 'Maths', 'Français', 'Histoire', 'Physiq
 export default function Session() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { user, profile, isPremium } = useAuth()
+  const { user, profile, isPremium, refreshProfile } = useAuth()
   const { startSession, closeSession, showUpgradeBanner, sessionId } = useSession()
 
   const mode = params.get('mode') || (isPremium ? 'premium' : 'free')
@@ -50,6 +51,9 @@ export default function Session() {
   // BLOC 6 — streak + points
   const [streak, setStreak]           = useState(profile?.streak ?? 0)
   const [points, setPoints]           = useState(profile?.points ?? 0)
+  // Transition Dr Mind → avatar
+  const [transitioning, setTransitioning] = useState(false)
+  const { getAvatarColor } = useAvatarTransition(avatarName, transitioning)
 
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
@@ -65,6 +69,11 @@ export default function Session() {
     onTTS: null,
     onProfile: null,
     matiere,
+    onSeanceComplete: async () => {
+      setTransitioning(true)
+      await refreshProfile()
+      setTimeout(() => setTransitioning(false), 2000)
+    },
   })
 
   // Voice (Web Speech API)
@@ -254,10 +263,11 @@ export default function Session() {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: 'var(--bg)',
+      background: isSessionPremium ? getAvatarColor() : 'var(--bg)',
       maxWidth: '680px',
       margin: '0 auto',
       position: 'relative',
+      transition: 'background 1s ease-in-out',
     }}>
       {/* ── Top bar ── */}
       <div style={{
@@ -449,8 +459,15 @@ export default function Session() {
         borderBottom: '1px solid var(--border)',
         flexShrink: 0,
         gap: '12px',
+        opacity: transitioning ? 0 : 1,
+        transition: 'opacity 1s ease-in-out',
       }}>
-        <MaxAvatar isSpeaking={false} size={88} profile={profile?.intelligence_dominante ?? null} />
+        <div style={{
+          transform: transitioning ? 'scale(0.8)' : 'scale(1)',
+          transition: 'transform 0.5s ease-in-out',
+        }}>
+          <MaxAvatar isSpeaking={false} size={88} profile={profile?.intelligence_dominante ?? null} />
+        </div>
         <div style={{ flex: 1 }}>
           <PomodoroTimer />
         </div>
