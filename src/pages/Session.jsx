@@ -5,7 +5,6 @@ import { useSession } from '../context/SessionContext'
 import { useChat } from '../hooks/useChat'
 import { useVoice } from '../hooks/useVoice'
 import { useTTS } from '../hooks/useTTS'
-import { useAvatarTransition } from '../hooks/useAvatarTransition'
 import { getUserVictories, updateStreak } from '../services/supabase'
 
 import MaxAvatar      from '../components/avatar/MaxAvatar'
@@ -51,9 +50,6 @@ export default function Session() {
   // BLOC 6 — streak + points
   const [streak, setStreak]           = useState(profile?.streak ?? 0)
   const [points, setPoints]           = useState(profile?.points ?? 0)
-  // Transition Dr Mind → avatar
-  const [transitioning, setTransitioning] = useState(false)
-  const { getAvatarColor } = useAvatarTransition(avatarName, transitioning)
 
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
@@ -71,9 +67,8 @@ export default function Session() {
     onProfile: null,
     matiere,
     onSeanceComplete: async () => {
-      setTransitioning(true)
       await refreshProfile()
-      setTimeout(() => setTransitioning(false), 2000)
+      navigate('/avatar-transition')
     },
   })
 
@@ -264,11 +259,10 @@ export default function Session() {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: isSessionPremium ? getAvatarColor() : 'var(--bg)',
+      background: isSessionPremium ? 'var(--bg)' : 'var(--bg)',
       maxWidth: '680px',
       margin: '0 auto',
       position: 'relative',
-      transition: 'background 1s ease-in-out',
     }}>
       {/* ── Top bar ── */}
       <div style={{
@@ -460,13 +454,8 @@ export default function Session() {
         borderBottom: '1px solid var(--border)',
         flexShrink: 0,
         gap: '12px',
-        opacity: transitioning ? 0 : 1,
-        transition: 'opacity 1s ease-in-out',
       }}>
-        <div style={{
-          transform: transitioning ? 'scale(0.8)' : 'scale(1)',
-          transition: 'transform 0.5s ease-in-out',
-        }}>
+        <div>
           <MaxAvatar isSpeaking={false} size={88} profile={profile?.intelligence_dominante ?? null} />
         </div>
         <div style={{ flex: 1 }}>

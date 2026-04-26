@@ -9,6 +9,7 @@ import Auth            from '../pages/Auth'
 import Choice          from '../pages/Choice'
 import Onboarding      from '../pages/Onboarding'
 import DrMind          from '../pages/DrMind'
+import AvatarTransition from '../pages/AvatarTransition'
 import Session         from '../pages/Session'
 import ParentDashboard from '../pages/ParentDashboard'
 import Pricing         from '../pages/Pricing'
@@ -27,12 +28,13 @@ export default function AppRoutes() {
       <Route path="/legal" element={<Legal />} />
 
       {/* Protected */}
-      <Route path="/choice"     element={<ProtectedRoute><Choice /></ProtectedRoute>} />
-      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-      <Route path="/drMind"     element={<ProtectedRoute><DrMind /></ProtectedRoute>} />
-      <Route path="/session"    element={<ProtectedRoute><Session /></ProtectedRoute>} />
-      <Route path="/parent"     element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
-      <Route path="/settings"   element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/choice"            element={<ProtectedRoute><Choice /></ProtectedRoute>} />
+      <Route path="/onboarding"        element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/drMind"            element={<ProtectedRoute><DrMind /></ProtectedRoute>} />
+      <Route path="/avatar-transition" element={<ProtectedRoute><AvatarTransition /></ProtectedRoute>} />
+      <Route path="/session"           element={<ProtectedRoute><Session /></ProtectedRoute>} />
+      <Route path="/parent"            element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
+      <Route path="/settings"          element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
       {/* Stripe return */}
       <Route path="/success" element={<ProtectedRoute><SuccessPage /></ProtectedRoute>} />
