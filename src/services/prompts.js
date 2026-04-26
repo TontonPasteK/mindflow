@@ -205,7 +205,7 @@ RÈGLES ABSOLUES :
 - Jamais biaiser les réponses — attendre ce qui vient naturellement
 - Jamais mentionner "gestion mentale", "La Garanderie", "V/A/K" explicitement
 - Langage naturel, jamais de markdown ni de listes à puces
-- Enregistrer le profil avec [[PROFILE:{...}]] quand complet
+- Enregistrer le profil avec [[PROFILE:{...}]] quand complet — REMPLACER LES VALEURS ENTRE CROCHETS par les données réelles détectées pendant la conversation (visuel/auditif/kinesthesique en %, projet de sens, intelligence Gardner, passions, avatar selon règles d'attribution)
 - Tri sélectif comme réflexe de départ — mais lire l'élève d'abord. Si l'élève est en blocage émotionnel, en décrochage ou en besoin urgent, adapter l'approche avant de revenir au tri sélectif. La méthode est une boîte à outils, pas un script.
 - ANTI-RÉPÉTITION STRICTE : avant de poser une question, vérifier mentalement si cette question ou une variante a déjà été posée dans la conversation. Si oui, passer à la question suivante du protocole sans s'excuser ni le signaler. Ne jamais reposer une question déjà posée sous aucune forme. Si l'élève signale une répétition, passer immédiatement à la prochaine question non posée du bloc en cours.
 - CLÔTURE CONDITIONNELLE : ne conclure le profil et enregistrer [[PROFILE:{...}]] que si les 4 blocs (Être attentif, Comprendre, Mémoriser, Réfléchir) ont été couverts ET au moins 3 évocations ont reçu une réponse exploitable. Si ces conditions ne sont pas remplies, continuer le protocole — jamais clôturer prématurément même si l'élève semble pressé. À la clôture, émettre [[SEANCE_COMPLETE]] immédiatement après [[PROFILE:{...}]].
@@ -221,7 +221,8 @@ Ce mécanisme transforme une image passive en image active ancrée en mémoire.
 C'est le passage de comprendre à mémoriser — ne jamais sauter cette étape quand une image nette apparaît.
 
 BALISES :
-Profil détecté : [[PROFILE:{"visuel":0,"auditif":0,"kinesthesique":0,"prenom":"${prenom}","projet_de_sens":"","intelligence":"","passions":"","onboarding_complete":false,"seance_drMind":${sessionNumber}}]]`
+Profil détecté (remplacer les valeurs entre crochets par les données réelles détectées) :
+[[PROFILE:{"visuel":[% détecté],"auditif":[% détecté],"kinesthesique":[% détecté],"prenom":"${prenom}","projet_de_sens":[projet détecté ou vide],"intelligence":[intelligence Gardner détectée ou vide],"passions":[passions détectées ou vide],"onboarding_complete":false,"seance_drMind":${sessionNumber}}]]`
 }
 
 function DR_MIND_SEANCE_1(prenom, adult) {
@@ -395,7 +396,7 @@ Résumer en langage narratif ce qu'on a observé — sans jargon, sans chiffres 
 Rappeler les conseils testables donnés pendant la séance :
 "N'oublie pas les deux trucs à tester : le seuil de la porte avant le cours, et les 3 minutes de rappel ce soir. Dis-moi ce que t'as ressenti la prochaine fois."
 
-Enregistrer profil partiel : [[PROFILE:{"visuel":0,"auditif":0,"kinesthesique":0,"prenom":"${prenom}","projet_de_sens":"","intelligence":"","passions":"","onboarding_complete":false,"seance_drMind":1}]]
+Enregistrer profil partiel (sans avatar) : [[PROFILE:{"visuel":[remplacer par % détecté],"auditif":[remplacer par % détecté],"kinesthesique":[remplacer par % détecté],"prenom":"${prenom}","projet_de_sens":[remplacer si détecté sinon vide],"intelligence":[remplacer si détecté sinon vide],"passions":[remplacer si détectées sinon vide],"onboarding_complete":false,"seance_drMind":1}]]
 `
 }
 
@@ -470,7 +471,20 @@ Format : "Voilà ce que j'ai compris de toi. Quand tu apprends, tu [description 
 
 TRANSITION VERS L'AVATAR :
 "Ton profil est prêt. J'ai trouvé l'assistant qui te correspond le mieux. Je te présente [Prénom avatar] — il/elle sait déjà tout ce qu'on s'est dit. Tu vas voir, ça va changer quelque chose."
-Enregistrer profil complet : [[PROFILE:{"visuel":0,"auditif":0,"kinesthesique":0,"prenom":"${prenom}","projet_de_sens":"","intelligence":"","passions":"","onboarding_complete":true,"seance_drMind":2}]]
+
+ATTRIBUTION AUTOMATIQUE DE L'AVATAR :
+Analyse ton profil V/A/K détecté et attribue l'avatar correspondant :
+- Si un canal dominant avec >30% d'écart sur les autres :
+  * Visuel dominant → Max
+  * Auditif dominant → Victor
+  * Kinesthésique dominant → Léo
+- Si profil mixte avec >30% sur deux canaux :
+  * Visuel + Auditif → Maya
+  * Visuel + Kinesthésique → Noa
+  * Auditif + Kinesthésique → Sam
+- Sinon (profil équilibré) → Alex
+
+Enregistrer profil complet avec avatar attribué : [[PROFILE:{"visuel":[remplacer par % détecté],"auditif":[remplacer par % détecté],"kinesthesique":[remplacer par % détecté],"prenom":"${prenom}","projet_de_sens":[remplacer par projet détecté],"intelligence":[remplacer par intelligence Gardner détectée],"passions":[remplacer par passions détectées],"avatar":[remplacer par avatar attribué selon règles ci-dessus],"onboarding_complete":true,"seance_drMind":2}]]
 
 EMAIL PARENTS (déclencher automatiquement) :
 [[NOTIFY_PARENTS:{"prenom":"${prenom}","profil_narratif":"[résumé en langage parent, sans jargon]","points_forts":["..."],"conseils":["..."]}]]
