@@ -242,6 +242,103 @@ async function scanWithMistral(imageBase64, mimeType) {
   } catch { return null }
 }
 
+// ─── Groq fallback (quand Anthropic n'a pas de crédits) ───────────────────────
+
+async function callGroq(systemPrompt, messages) {
+  const groqKey = process.env.GROQ_API_KEY
+  if (!groqKey) throw new Error('GROQ_API_KEY not configured')
+
+  const groqMessages = messages.map(m => ({
+    role: m.role,
+    content: m.content,
+  }))
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${groqKey}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...groqMessages,
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error?.message || `Groq error ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content || ''
+}
+
+async function callGroqStream(systemPrompt, messages, onChunk) {
+  const groqKey = process.env.GROQ_API_KEY
+  if (!groqKey) throw new Error('GROQ_API_KEY not configured')
+
+  const groqMessages = messages.map(m => ({
+    role: m.role,
+    content: m.content,
+  }))
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${groqKey}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...groqMessages,
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+      stream: true,
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error?.message || `Groq error ${response.status}`)
+  }
+
+  const reader = response.body.getReader()
+  const dec = new TextDecoder()
+  let buf = '', text = ''
+
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += dec.decode(value, { stream: true })
+    const lines = buf.split('\n')
+    buf = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const raw = line.slice(6)
+      if (raw === '[DONE]') continue
+      try {
+        const ev = JSON.parse(raw)
+        if (ev.choices?.[0]?.delta?.content) {
+          const chunk = ev.choices[0].delta.content
+          text += chunk
+          onChunk(chunk)
+        }
+      } catch { continue }
+    }
+  }
+
+  return text
+}
+
 function hasImageContent(messages) {
   return messages.some(m => Array.isArray(m.content) && m.content.some(b => b.type === 'image'))
 }
@@ -306,7 +403,9 @@ async function callClaude(systemPrompt, messages, apiKey) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
-    throw new Error(err.error?.message || `Claude error ${response.status}`)
+    // Fallback vers Groq si Anthropic échoue (crédits insuffisants, etc.)
+    console.log('[chat API] Anthropic failed, falling back to Groq:', err.error?.message || response.status)
+    return callGroq(systemPrompt, messages)
   }
 
   const data = await response.json()
@@ -349,10 +448,22 @@ async function callClaudeStream(systemPrompt, messages, apiKey, res) {
 
   if (!claudeRes.ok) {
     const err = await claudeRes.json().catch(() => ({}))
-    res.setHeader('Content-Type', 'application/json')
-    return res.status(claudeRes.status).json({
-      error: err.error?.message || `Claude error ${claudeRes.status}`,
-    })
+    // Fallback vers Groq si Anthropic échoue (crédits insuffisants, etc.)
+    console.log('[chat API] Anthropic streaming failed, falling back to Groq:', err.error?.message || claudeRes.status)
+
+    try {
+      const text = await callGroqStream(systemPrompt, messages, (chunk) => {
+        res.write(`data: ${JSON.stringify({ t: chunk })}\n\n`)
+      })
+      res.write('data: [DONE]\n\n')
+      res.end()
+      return
+    } catch (groqErr) {
+      res.setHeader('Content-Type', 'application/json')
+      return res.status(claudeRes.status).json({
+        error: err.error?.message || `Claude error ${claudeRes.status}`,
+      })
+    }
   }
 
   res.setHeader('Content-Type',  'text/event-stream')
