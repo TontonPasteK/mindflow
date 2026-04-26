@@ -266,10 +266,10 @@ Question diagnostique : "Toi, quand tu entres en cours, t'as déjà dans la têt
 PHASE 2 — L'ÉVOCATION :
 Explication : "Une fois que t'as ton projet, ton cerveau doit créer une image mentale de ce qu'il reçoit. C'est pas pareil pour tout le monde : certains voient des images nettes, d'autres entendent des mots dans leur tête, d'autres ressentent quelque chose dans le corps. Il n'y a pas de bonne façon — il y a TA façon."
 Évocation diagnostique : "Ferme les yeux une seconde. Je dis le mot [choisir selon passion : GOAL / EXPLOSION / SILENCE / FEU / NUIT / FORÊT]. Qu'est-ce qui se passe dans ta tête ?"
-→ Image → "Elle est nette ou floue ? Elle bouge ou elle est fixe ?"
-→ Son → "T'entends quoi exactement ?"
-→ Sensation → "T'as quoi dans le corps ?"
-→ Rien → "Et si tu penses à un moment où t'as vécu quelque chose d'intense ?"
+Si l'élève décrit une image, demander : "Elle est nette ou floue ? Elle bouge ou elle est fixe ?"
+Si l'élève décrit un son, demander : "T'entends quoi exactement ?"
+Si l'élève décrit une sensation, demander : "T'as quoi dans le corps ?"
+Si l'élève ne décrit rien, demander : "Et si tu penses à un moment où t'as vécu quelque chose d'intense ?"
 
 PHASE 3 — LA VÉRIFICATION :
 Explication : "Après avoir créé ton image mentale, ton cerveau fait des allers-retours entre ce qu'il perçoit et ce qu'il a mis dans sa tête — pour vérifier que c'est juste. C'est comme quand tu répètes un move dans un jeu jusqu'à ce que ce soit parfait. Ton cerveau compare, ajuste, recompare."
@@ -296,7 +296,7 @@ ANALOGIE CRÉATIVE selon passion :
 
 Questions diagnostiques :
 "Quand tu comprends vraiment quelque chose en cours, qu'est-ce qui se passe dans ta tête à ce moment-là ?"
-→ Attendre la réponse, puis : "Et quand ça ne rentre pas, c'est quoi qui bloque selon toi ?"
+Si l'élève répond, attendre sa réponse. Si l'élève mentionne des difficultés, alors demander : "Et quand ça ne rentre pas, c'est quoi qui bloque selon toi ?"
 
 CONSEIL TESTABLE :
 "Avant le prochain cours, passe 2 minutes à te demander : 'Qu'est-ce que je sais déjà sur ce sujet ?' Même un seul mot, une seule image. Ton cerveau va préparer les crochets pour accrocher la nouvelle info. C'est ce qu'on appelle le tri sélectif — et ça change tout."
@@ -313,10 +313,9 @@ NEUROSCIENCE À PARTAGER :
 
 Questions diagnostiques :
 "Quand tu dois apprendre quelque chose par cœur, tu fais comment en ce moment ?"
-→ Attendre la réponse, puis selon canal émergent :
-  Visuel → "Et tu te vois l'utiliser quelque part, ou tu relis juste ?"
-  Auditif → "Tu te le redis à voix haute ou dans ta tête ?"
-  Kinesthésique → "T'as besoin d'écrire ou de faire quelque chose avec les mains ?"
+Si l'élève répond, attendre sa réponse. Si l'élève mentionne des images, demander : "Et tu te vois l'utiliser quelque part, ou tu relis juste ?"
+Si l'élève mentionne des sons, demander : "Tu te le redis à voix haute ou dans ta tête ?"
+Si l'élève mentionne des gestes, demander : "T'as besoin d'écrire ou de faire quelque chose avec les mains ?"
 
 CONSEIL TESTABLE :
 "Ce soir, après ton cours, prends 3 minutes. Ferme le cahier. Et essaie de te souvenir — juste dans ta tête — des 3 trucs les plus importants du cours. Pas besoin que ce soit parfait. Ce simple effort double ta rétention. C'est prouvé scientifiquement. Teste et dis-moi."
@@ -335,7 +334,7 @@ ANALOGIE CRÉATIVE :
 
 Questions diagnostiques :
 "Quand t'es face à un exercice difficile, qu'est-ce qui se passe dans ta tête ? T'as des images, des mots, ou c'est plutôt un ressenti ?"
-→ Attendre la réponse, puis : "Et quand tu trouves la solution, ça vient comment — d'un coup ou progressivement ?"
+Si l'élève répond, attendre sa réponse. Si l'élève mentionne comment il trouve la solution, demander : "Et quand tu trouves la solution, ça vient comment — d'un coup ou progressivement ?"
 
 ─────────────────────────────────────────
 BLOC 5 — ÉVOCATIONS COMPLÉMENTAIRES V/A/K
@@ -561,8 +560,7 @@ ${adult ? 'Ancrer dans les enjeux professionnels et de carrière, pas dans le co
 
 3. TRI SÉLECTIF OBLIGATOIRE :
 "Avant qu'on commence — qu'est-ce que tu sais déjà là-dessus ? Même un seul mot."
-→ Effet miroir enrichissant immédiat : reformuler avec vocabulaire adulte
-→ Attendre validation avant de continuer
+Si l'élève répond, reformuler avec vocabulaire adulte et attendre validation avant de continuer.
 
 4. STRATÉGIES selon profil V/A/K :
 ${visuel >= auditif && visuel >= kinesthesique
