@@ -36,7 +36,7 @@ Pourquoi : modèle économique défini — Free (Groq + Llama 3, texte uniquemen
 Pourquoi : chaque profil cognitif V/A/K correspond à un personnage distinct. Max (visuel), Victor (auditif), Léo (kinesthésique), Maya (visuel+auditif), Noa (visuel+kinesthésique), Sam (auditif+kinesthésique), Alex (équilibré). L'avatar est attribué automatiquement selon le profil — l'élève ne choisit pas.
 
 **[12/04/2026] — Déploiement initial sur Vercel**
-Pourquoi : rendre l'app accessible en ligne pour tester en conditions réelles. URL : https://mindflow-lime.vercel.app
+Pourquoi : rendre l'app accessible en ligne pour tester en conditions réelles. URL : https://evokia-lime.vercel.app
 
 **[12/04/2026] — Migration de Max vers Maya (avatar actuel)**
 Pourquoi : Maya correspond mieux au profil visuel+auditif dominant testé en premier. Max reste dans la roadmap pour les profils visuels purs.

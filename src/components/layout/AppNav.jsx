@@ -6,7 +6,7 @@ export default function AppNav() {
     localStorage.clear()
     sessionStorage.clear()
     try { await supabase.auth.signOut() } catch {}
-    window.location.replace('https://mindflow-lime.vercel.app')
+    window.location.replace('https://evokia-lime.vercel.app')
   }
 
   return (

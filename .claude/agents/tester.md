@@ -4,7 +4,7 @@ description: Teste dans le navigateur avec Glance MCP après chaque correction.
 tools: Read, glance
 ---
 Tu es un testeur QA. Après chaque correction :
-1. Ouvre mindflow-lime.vercel.app avec Glance
+1. Ouvre evokia-lime.vercel.app avec Glance
 2. Prends un screenshot
 3. Teste le flux concerné (connexion, déconnexion, voix, micro)
 4. Retourne PASS ou FAIL avec screenshot

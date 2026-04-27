@@ -2,7 +2,7 @@
 
 App web d'accompagnement cognitif basée sur la méthode Pastek (gestion mentale).
 Public : collégiens, étudiants, adultes en formation/reconversion.
-Production : https://mindflow-lime.vercel.app
+Production : https://evokia-lime.vercel.app
 
 ## Stack
 

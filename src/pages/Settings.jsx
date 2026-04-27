@@ -20,7 +20,7 @@ export default function Settings() {
     localStorage.clear()
     sessionStorage.clear()
     try { await supabase.auth.signOut() } catch {}
-    window.location.replace('https://mindflow-lime.vercel.app')
+    window.location.replace('https://evokia-lime.vercel.app')
   }
 
   const handleDeleteAccount = async () => {
@@ -72,7 +72,7 @@ export default function Settings() {
       // Déconnexion et redirection
       localStorage.clear()
       sessionStorage.clear()
-      window.location.replace('https://mindflow-lime.vercel.app')
+      window.location.replace('https://evokia-lime.vercel.app')
     } catch (err) {
       console.error('Erreur suppression compte:', err)
       alert('Erreur lors de la suppression du compte. Contactez le support.')

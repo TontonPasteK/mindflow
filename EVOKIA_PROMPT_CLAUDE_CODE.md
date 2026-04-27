@@ -3,7 +3,7 @@
 ## CONTEXTE PROJET
 
 Repo       : C:\Users\scolr\mindflow
-Production : https://mindflow-lime.vercel.app
+Production : https://evokia-lime.vercel.app
 Stack      : React + Vite, Supabase, Claude Sonnet API, OpenAI TTS onyx, Vercel
 Compte     : scolrcoaching@gmail.com (premium via SQL)
 

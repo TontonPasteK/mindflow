@@ -1,7 +1,7 @@
 # MindFlow — Instructions du projet Claude
 
 ## CONTEXTE PROJET
-MindFlow est une app mobile de coaching cognitif basée sur la méthode Pastek (gestion mentale — méthode propre, distincte de La Garanderie). Public cible : collégiens via parents (MVP), adultes en reconversion. Production : https://mindflow-lime.vercel.app. Repo : C:\Users\scolr\mindflow. Stack : React+Vite, Supabase (yrjgxafuiclmhjkebjqu), Claude Sonnet API, OpenAI TTS onyx, Web Speech API, Vercel. Compte test : scolrcoaching@gmail.com — premium via SQL.
+MindFlow est une app mobile de coaching cognitif basée sur la méthode Pastek (gestion mentale — méthode propre, distincte de La Garanderie). Public cible : collégiens via parents (MVP), adultes en reconversion. Production : https://evokia-lime.vercel.app. Repo : C:\Users\scolr\mindflow. Stack : React+Vite, Supabase (yrjgxafuiclmhjkebjqu), Claude Sonnet API, OpenAI TTS onyx, Web Speech API, Vercel. Compte test : scolrcoaching@gmail.com — premium via SQL.
 
 ## MÉTHODE PASTEK — RÈGLES DR MIND
 - Tri sélectif TOUJOURS en premier, non interruptible. Si l'élève donne une réponse intéressante en cours de tri sélectif : accuser réception en une phrase, finir le tri sélectif avant de rebondir sur le contenu.
