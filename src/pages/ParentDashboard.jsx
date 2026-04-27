@@ -33,6 +33,10 @@ export default function ParentDashboard() {
   const [editError, setEditError]         = useState('')
   const [editSuccess, setEditSuccess]     = useState(false)
 
+  // BLOC 3 — Gestion multi-enfants
+  const [showAddChild, setShowAddChild]   = useState(false)
+  const [unlinkLoading, setUnlinkLoading] = useState(null)
+
   useEffect(() => {
     if (user) loadChildren()
   }, [user])
@@ -128,6 +132,41 @@ export default function ParentDashboard() {
     }
   }
 
+  // BLOC 3 — Gestion multi-enfants
+  const handleUnlinkChild = async (childId) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce lien ? Vous ne pourrez plus voir les statistiques de cet enfant.')) {
+      return
+    }
+
+    setUnlinkLoading(childId)
+    try {
+      const { error } = await supabase
+        .from('parent_child_links')
+        .delete()
+        .eq('parent_id', user.id)
+        .eq('child_id', childId)
+
+      if (error) throw error
+
+      // Recharger la liste des enfants
+      await loadChildren()
+
+      // Si c'était l'enfant sélectionné, réinitialiser
+      if (selectedChild?.id === childId) {
+        setSelectedChild(null)
+        setChildStats(null)
+        setChildProfile(null)
+        setChildKG(null)
+        setChildSessions([])
+      }
+    } catch (err) {
+      console.error('Erreur unlink child:', err)
+      alert('Erreur lors de la suppression du lien')
+    } finally {
+      setUnlinkLoading(null)
+    }
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -216,31 +255,60 @@ export default function ParentDashboard() {
       )}
 
       {/* Child selector */}
-      {children.length > 1 && (
+      {children.length > 0 && (
         <div style={{
-          display: 'flex', gap: '10px',
+          display: 'flex',
+          gap: '10px',
           marginBottom: '24px',
           overflowX: 'auto',
           paddingBottom: '4px',
+          alignItems: 'center',
         }}>
           {children.map(c => (
-            <button
+            <div
               key={c.child_id}
-              onClick={() => selectChild(c.child_id, c.users)}
               style={{
-                padding: '8px 18px',
-                borderRadius: '20px',
-                border: `1px solid ${selectedChild?.id === c.child_id ? 'var(--accent)' : 'var(--border)'}`,
-                background: selectedChild?.id === c.child_id ? 'var(--accent-dim)' : 'var(--bg-card)',
-                color: selectedChild?.id === c.child_id ? 'var(--accent)' : 'var(--text-2)',
-                cursor: 'pointer',
-                fontWeight: '500',
-                fontSize: '14px',
-                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
               }}
             >
-              {c.users?.prenom || 'Enfant'}
-            </button>
+              <button
+                onClick={() => selectChild(c.child_id, c.users)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '20px',
+                  border: `1px solid ${selectedChild?.id === c.child_id ? 'var(--accent)' : 'var(--border)'}`,
+                  background: selectedChild?.id === c.child_id ? 'var(--accent-dim)' : 'var(--bg-card)',
+                  color: selectedChild?.id === c.child_id ? 'var(--accent)' : 'var(--text-2)',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {c.users?.prenom || 'Enfant'}
+              </button>
+              {/* BLOC 3 — Bouton supprimer lien */}
+              <button
+                onClick={() => handleUnlinkChild(c.child_id)}
+                disabled={unlinkLoading === c.child_id}
+                style={{
+                  padding: '4px 8px',
+                  background: 'var(--error-dim)',
+                  border: '1px solid var(--error)',
+                  borderRadius: '12px',
+                  color: 'var(--error)',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  opacity: unlinkLoading === c.child_id ? 0.5 : 1,
+                }}
+                title="Supprimer le lien"
+              >
+                {unlinkLoading === c.child_id ? '...' : '✕'}
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -498,7 +566,7 @@ export default function ParentDashboard() {
       {children.length > 0 && (
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
           <button
-            onClick={() => {}}
+            onClick={() => setShowAddChild(true)}
             style={{
               background: 'none', border: 'none',
               color: 'var(--accent)', cursor: 'pointer',
@@ -507,6 +575,92 @@ export default function ParentDashboard() {
           >
             + Lier un autre enfant
           </button>
+        </div>
+      )}
+
+      {/* BLOC 3 — Modal ajouter enfant */}
+      {showAddChild && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px',
+        }}>
+          <div style={{
+            background: 'var(--bg)',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '100%',
+            border: '1px solid var(--border)',
+          }}>
+            <h3 style={{
+              fontFamily: 'var(--f-title)',
+              fontSize: '18px',
+              marginBottom: '16px',
+              color: 'var(--text)',
+            }}>
+              Lier un autre enfant
+            </h3>
+
+            <form onSubmit={handleLink} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{
+                  fontSize: '13px', fontWeight: '500',
+                  color: 'var(--text-2)', marginBottom: '6px', display: 'block',
+                }}>
+                  Email du compte Evokia de l'enfant
+                </label>
+                <Input
+                  value={linkEmail}
+                  onChange={e => { setLinkEmail(e.target.value); setLinkError('') }}
+                  placeholder="email@enfant.fr"
+                  type="email"
+                  error={linkError}
+                  required
+                />
+              </div>
+
+              {linkSuccess && (
+                <p style={{
+                  fontSize: '13px',
+                  color: 'var(--accent)',
+                  padding: '10px 14px',
+                  background: 'rgba(29,158,117,0.1)',
+                  borderRadius: 'var(--r-sm)',
+                  margin: 0,
+                }}>Compte lié avec succès !</p>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowAddChild(false)
+                    setLinkEmail('')
+                    setLinkError('')
+                    setLinkSuccess(false)
+                  }}
+                  disabled={linkLoading}
+                  style={{ flex: 1 }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  loading={linkLoading}
+                  style={{ flex: 1 }}
+                >
+                  Lier
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
