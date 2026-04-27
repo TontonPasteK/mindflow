@@ -12,6 +12,8 @@ export default function Settings() {
   const { user, profile, isPremium, plan } = useAuth()
   const [loading, setLoading] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const handleLogout = async () => {
     window.dispatchEvent(new Event('mindflow:logout'))
@@ -19,6 +21,65 @@ export default function Settings() {
     sessionStorage.clear()
     try { await supabase.auth.signOut() } catch {}
     window.location.replace('https://mindflow-lime.vercel.app')
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true)
+    try {
+      // Supprimer toutes les données de l'utilisateur
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', user.id)
+
+      const { error: sessionsError } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('user_id', user.id)
+
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .in('session_id', (
+          await supabase.from('sessions').select('id').eq('user_id', user.id)
+        ).data?.map(s => s.id) || [])
+
+      const { error: victoriesError } = await supabase
+        .from('victories')
+        .delete()
+        .eq('user_id', user.id)
+
+      const { error: kgError } = await supabase
+        .from('knowledge_graph')
+        .delete()
+        .eq('user_id', user.id)
+
+      const { error: notionsError } = await supabase
+        .from('notions_travaillees')
+        .delete()
+        .eq('user_id', user.id)
+
+      const { error: parentLinksError } = await supabase
+        .from('parent_links')
+        .delete()
+        .or(`parent_id.eq.${user.id},child_id.eq.${user.id}`)
+
+      // Supprimer le compte utilisateur
+      const { error: userError } = await supabase.auth.admin.deleteUser(user.id)
+
+      if (userError) throw userError
+
+      // Déconnexion et redirection
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.replace('https://mindflow-lime.vercel.app')
+    } catch (err) {
+      console.error('Erreur suppression compte:', err)
+      alert('Erreur lors de la suppression du compte. Contactez le support.')
+    } finally {
+      setDeleteLoading(false)
+      setConfirmDelete(false)
+    }
   }
 
   const handleManagePlan = async () => {
@@ -106,6 +167,14 @@ export default function Settings() {
           >
             Se déconnecter
           </Button>
+          <Button
+            variant="danger"
+            fullWidth
+            onClick={() => setConfirmDelete(true)}
+            style={{ marginTop: '8px' }}
+          >
+            Supprimer mon compte et toutes mes données
+          </Button>
         </Section>
       </div>
 
@@ -120,6 +189,31 @@ export default function Settings() {
           </Button>
           <Button variant="danger" fullWidth onClick={handleLogout}>
             Déconnecter
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Delete account confirm modal */}
+      <Modal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} title="Supprimer le compte ?">
+        <p style={{ color: 'var(--text-2)', fontSize: '14px', marginBottom: '12px', lineHeight: '1.6' }}>
+          <strong style={{ color: 'var(--error)' }}>Attention : cette action est irréversible.</strong>
+        </p>
+        <p style={{ color: 'var(--text-2)', fontSize: '14px', marginBottom: '20px', lineHeight: '1.6' }}>
+          Toutes tes données seront définitivement supprimées :
+        </p>
+        <ul style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7', marginBottom: '20px', paddingLeft: '20px' }}>
+          <li>Profil et informations personnelles</li>
+          <li>Historique des sessions</li>
+          <li>Profil cognitif</li>
+          <li>Journal de victoires</li>
+          <li>Connaissances et notions travaillées</li>
+        </ul>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Button variant="secondary" fullWidth onClick={() => setConfirmDelete(false)}>
+            Annuler
+          </Button>
+          <Button variant="danger" fullWidth onClick={handleDeleteAccount} loading={deleteLoading}>
+            Supprimer définitivement
           </Button>
         </div>
       </Modal>
