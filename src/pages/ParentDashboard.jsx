@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../services/supabase'
 import { linkParentToChild, getLinkedChildren, getChildStats, getKnowledgeGraph, getProfile, getUserSessions } from '../services/supabase'
+import { sendWeeklyParentReport } from '../services/weeklyReport'
 import StatsCard from '../components/parent/StatsCard'
 import SubjectsList from '../components/parent/SubjectsList'
 import VictoriesJournal from '../components/parent/VictoriesJournal'
@@ -36,6 +37,11 @@ export default function ParentDashboard() {
   // BLOC 3 — Gestion multi-enfants
   const [showAddChild, setShowAddChild]   = useState(false)
   const [unlinkLoading, setUnlinkLoading] = useState(null)
+
+  // BLOC 11 — Rapport hebdomadaire
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportSuccess, setReportSuccess] = useState(false)
+  const [reportError, setReportError] = useState('')
 
   useEffect(() => {
     if (user) loadChildren()
@@ -164,6 +170,38 @@ export default function ParentDashboard() {
       alert('Erreur lors de la suppression du lien')
     } finally {
       setUnlinkLoading(null)
+    }
+  }
+
+  // BLOC 11 — Envoyer rapport hebdomadaire
+  const handleSendWeeklyReport = async () => {
+    if (!selectedChild?.id) return
+
+    setReportLoading(true)
+    setReportError('')
+    setReportSuccess(false)
+
+    try {
+      // Récupérer l'email du parent
+      const { data: parentData } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', user.id)
+        .single()
+
+      if (!parentData?.email) {
+        throw new Error('Email parent non trouvé')
+      }
+
+      await sendWeeklyParentReport(selectedChild.id, parentData.email)
+      setReportSuccess(true)
+
+      // Masquer le succès après 5 secondes
+      setTimeout(() => setReportSuccess(false), 5000)
+    } catch (err) {
+      setReportError(err.message || 'Erreur lors de l\'envoi du rapport')
+    } finally {
+      setReportLoading(false)
     }
   }
 
@@ -343,7 +381,54 @@ export default function ParentDashboard() {
             >
               ✏️ Modifier
             </button>
+            {/* BLOC 11 — Bouton rapport hebdomadaire */}
+            <button
+              onClick={handleSendWeeklyReport}
+              disabled={reportLoading}
+              style={{
+                padding: '4px 10px',
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent)',
+                borderRadius: '6px',
+                color: 'var(--accent)',
+                fontSize: '12px',
+                cursor: 'pointer',
+                fontWeight: '500',
+                opacity: reportLoading ? 0.5 : 1,
+              }}
+              title="Envoyer le rapport hebdomadaire par email"
+            >
+              {reportLoading ? '...' : '📊 Rapport'}
+            </button>
           </h2>
+
+          {/* BLOC 11 — Messages rapport hebdomadaire */}
+          {reportSuccess && (
+            <div style={{
+              padding: '10px 14px',
+              background: 'rgba(29,158,117,0.1)',
+              border: '1px solid rgba(29,158,117,0.25)',
+              borderRadius: 'var(--r-sm)',
+              fontSize: '13px',
+              color: 'var(--accent)',
+              marginTop: '8px',
+            }}>
+              ✅ Rapport envoyé avec succès !
+            </div>
+          )}
+          {reportError && (
+            <div style={{
+              padding: '10px 14px',
+              background: 'var(--error-dim)',
+              border: '1px solid rgba(224,82,82,0.25)',
+              borderRadius: 'var(--r-sm)',
+              fontSize: '13px',
+              color: 'var(--error)',
+              marginTop: '8px',
+            }}>
+              ❌ {reportError}
+            </div>
+          )}
 
           {loadingStats ? (
             <LoadingSpinner />
