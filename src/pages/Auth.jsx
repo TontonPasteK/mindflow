@@ -7,7 +7,7 @@ import Input from '../components/ui/Input'
 export default function Auth() {
   const [params] = useSearchParams()
   const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'login')
-  const [form, setForm] = useState({ prenom: '', email: '', password: '', niveau: '' })
+  const [form, setForm] = useState({ prenom: '', email: '', password: '', niveau: '', isParent: false })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [globalError, setGlobalError] = useState('')
@@ -83,8 +83,14 @@ export default function Auth() {
     setGlobalError('')
     try {
       if (mode === 'signup') {
-        await signUp({ email: form.email, password: form.password, prenom: form.prenom, niveau: form.niveau })
-        navigate('/choice')
+        await signUp({ email: form.email, password: form.password, prenom: form.prenom, niveau: form.niveau, isParent: form.isParent })
+
+        // Redirection selon le rôle
+        if (form.isParent) {
+          navigate('/parent-onboarding')
+        } else {
+          navigate('/choice')
+        }
       } else {
         await signIn({ email: form.email, password: form.password })
         navigate('/choice')
@@ -235,6 +241,50 @@ export default function Auth() {
                 {errors.niveau && (
                   <p style={{ fontSize: '12px', color: 'var(--error)', margin: 0 }}>{errors.niveau}</p>
                 )}
+              </div>
+
+              {/* Toggle Parent/Élève */}
+              <div style={{
+                display: 'flex',
+                gap: '0',
+                marginBottom: '16px',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => { setForm(f => ({ ...f, isParent: false })); setErrors(er => ({ ...er, role: '' })) }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: !form.isParent ? 'var(--accent-dim)' : 'var(--bg-card)',
+                    color: !form.isParent ? 'var(--accent)' : 'var(--text-3)',
+                    fontWeight: !form.isParent ? '600' : '400',
+                    fontSize: '14px',
+                  }}
+                >
+                  🎓 Je suis un élève
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setForm(f => ({ ...f, isParent: true })); setErrors(er => ({ ...er, role: '' })) }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderLeft: '1px solid var(--border)',
+                    background: form.isParent ? 'var(--accent-dim)' : 'var(--bg-card)',
+                    color: form.isParent ? 'var(--accent)' : 'var(--text-3)',
+                    fontWeight: form.isParent ? '600' : '400',
+                    fontSize: '14px',
+                  }}
+                >
+                  👨‍👩‍👧‍👦 Je suis un parent
+                </button>
               </div>
             </>
           )}

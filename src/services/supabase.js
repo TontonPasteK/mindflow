@@ -7,13 +7,26 @@ export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
-export async function signUp({ email, password, prenom, niveau }) {
+export async function signUp({ email, password, prenom, niveau, isParent }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { prenom, niveau: niveau || null } },
+    options: { data: { prenom, niveau: niveau || null, role: isParent ? 'parent' : 'eleve' } },
   })
   if (error) throw error
+
+  // Créer le profil avec le rôle
+  if (data.user) {
+    await supabase
+      .from('profiles')
+      .upsert({
+        user_id: data.user.id,
+        role: isParent ? 'parent' : 'eleve',
+        prenom,
+        niveau: niveau || null,
+      }, { onConflict: 'user_id' })
+  }
+
   return data
 }
 
