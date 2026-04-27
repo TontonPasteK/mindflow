@@ -18,6 +18,7 @@ import Settings        from '../pages/Settings'
 import ResetPassword   from '../pages/ResetPassword'
 import Legal           from '../pages/Legal'
 import Privacy         from '../pages/Privacy'
+import HowItWorks      from '../pages/HowItWorks'
 
 export default function AppRoutes() {
   return (
@@ -29,6 +30,7 @@ export default function AppRoutes() {
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/legal" element={<Legal />} />
       <Route path="/privacy" element={<Privacy />} />
+      <Route path="/how-it-works" element={<HowItWorks />} />
 
       {/* Protected */}
       <Route path="/choice"            element={<ProtectedRoute><Choice /></ProtectedRoute>} />
