@@ -57,6 +57,10 @@ export default function Session() {
   const [sessionTimeLeft, setSessionTimeLeft] = useState(null)
   const [sessionEnded, setSessionEnded] = useState(false)
 
+  // BLOC 4 — Reprise de session
+  const [showResumeSession, setShowResumeSession] = useState(false)
+  const [lastSessionResume, setLastSessionResume] = useState(null)
+
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
     onPlayStart: (msgId) => setSpeakingMessageId(msgId),
@@ -107,6 +111,26 @@ export default function Session() {
       // BLOC 5 — charger victoires récentes
       if (isSessionPremium) {
         getUserVictories(user.id, 5).then(vs => setRecentVictories(vs || [])).catch(() => {})
+      }
+      // BLOC 4 — Charger dernière session pour reprise
+      try {
+        const { data: sessions } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('ended_at', null)
+          .order('started_at', { ascending: false })
+          .limit(1)
+
+        if (sessions && sessions.length > 0) {
+          const lastSession = sessions[0]
+          if (lastSession.resume) {
+            setLastSessionResume(lastSession.resume)
+            setShowResumeSession(true)
+          }
+        }
+      } catch (err) {
+        console.warn('[Session] Failed to load last session:', err)
       }
       setSessionReady(true)
     }
@@ -558,6 +582,67 @@ export default function Session() {
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '12px' }}>
             Redirection automatique...
+          </div>
+        </div>
+      )}
+
+      {/* BLOC 4 — Banner reprise de session */}
+      {showResumeSession && lastSessionResume && (
+        <div style={{
+          margin: '0 16px 8px',
+          padding: '16px',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--accent)',
+          borderRadius: 'var(--r-md)',
+          fontSize: '14px',
+          color: 'var(--text)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <span style={{ fontSize: '24px', flexShrink: 0 }}>🔄</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: '700', marginBottom: '8px', color: 'var(--accent)' }}>
+                Reprendre la session précédente ?
+              </div>
+              <div style={{ color: 'var(--text-2)', marginBottom: '12px', lineHeight: '1.5' }}>
+                Tu avais commencé à travailler sur :<br/>
+                <em>"{lastSessionResume.substring(0, 150)}{lastSessionResume.length > 150 ? '...' : ''}"</em>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setShowResumeSession(false)}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'var(--bg-2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    color: 'var(--text-2)',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Nouvelle session
+                </button>
+                <button
+                  onClick={() => {
+                    setShowResumeSession(false)
+                    sendMessage(lastSessionResume)
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'var(--accent)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#080D0A',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Reprendre
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
