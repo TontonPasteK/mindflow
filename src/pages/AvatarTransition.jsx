@@ -12,7 +12,7 @@ const AVATAR_COLORS = {
   Maya: '#14B8A6',     // bleu turquoise
   Noa: '#EAB308',      // jaune vif
   Sam: '#EF4444',      // rouge énergique
-  Alex: '#64748B',     // blanc et argent avec accents bleu nuit
+  Alex: '#1E3A8A',     // bleu nuit
 }
 
 // Messages par avatar
