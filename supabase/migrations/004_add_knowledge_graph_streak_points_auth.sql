@@ -56,12 +56,19 @@ create index if not exists idx_profiles_parent_id on public.profiles(parent_id);
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Parents peuvent lire les codes d'accès de leurs enfants
-create policy if not exists "profiles_parent_read_code" on public.profiles
-  for select using (
-    user_id in (
-      select child_id from public.parent_links where parent_id = auth.uid()
-    )
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'profiles_parent_read_code'
+  ) THEN
+    CREATE POLICY "profiles_parent_read_code" ON public.profiles
+      FOR SELECT USING (
+        user_id IN (
+          SELECT child_id FROM public.parent_links WHERE parent_id = auth.uid()
+        )
+      );
+  END IF;
+END $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. COLONNE AVATAR (déjà dans character_assigned, mais ajoutons avatar pour clarté)
