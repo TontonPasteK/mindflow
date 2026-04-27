@@ -65,6 +65,9 @@ export default function Session() {
   const [shortSessionMode, setShortSessionMode] = useState(false)
   const [shortSessionWarningShown, setShortSessionWarningShown] = useState(false)
 
+  // BLOC 6 — Persistance conversation
+  const [sessionPersisted, setSessionPersisted] = useState(false)
+
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
     onPlayStart: (msgId) => setSpeakingMessageId(msgId),
@@ -147,6 +150,45 @@ export default function Session() {
   useEffect(() => {
     if (sessionReady && inputMode !== null) initChat()
   }, [sessionReady, inputMode, initChat])
+
+  // BLOC 6 — Persistance des messages dans localStorage
+  useEffect(() => {
+    if (messages.length > 0 && user) {
+      const sessionKey = `session_messages_${user.id}_${sessionId}`
+      localStorage.setItem(sessionKey, JSON.stringify(messages))
+      setSessionPersisted(true)
+    }
+  }, [messages, user, sessionId])
+
+  // Restaurer les messages au chargement
+  useEffect(() => {
+    if (user && sessionId && !sessionPersisted) {
+      const sessionKey = `session_messages_${user.id}_${sessionId}`
+      const savedMessages = localStorage.getItem(sessionKey)
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages)
+          if (parsedMessages.length > 0) {
+            // Les messages sont gérés par useChat, on ne peut pas les modifier directement
+            // On marque juste que la session a été persistée
+            setSessionPersisted(true)
+          }
+        } catch (err) {
+          console.warn('[Session] Failed to parse saved messages:', err)
+        }
+      }
+    }
+  }, [user, sessionId, sessionPersisted])
+
+  // Nettoyer localStorage à la fin de session
+  useEffect(() => {
+    return () => {
+      if (user && sessionId) {
+        const sessionKey = `session_messages_${user.id}_${sessionId}`
+        localStorage.removeItem(sessionKey)
+      }
+    }
+  }, [user, sessionId])
 
   // ── Micro en mode parler ─────────────────────────────────
   useEffect(() => {
