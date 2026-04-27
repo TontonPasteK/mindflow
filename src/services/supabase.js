@@ -25,6 +25,20 @@ export async function signUp({ email, password, prenom, niveau, isParent }) {
         prenom,
         niveau: niveau || null,
       }, { onConflict: 'user_id' })
+
+    // Envoyer l'email de bienvenue aux parents
+    if (isParent) {
+      try {
+        await fetch('/api/welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, prenom }),
+        })
+      } catch (err) {
+        console.error('[signUp] Erreur envoi email bienvenue:', err.message)
+        // Ne pas bloquer l'inscription si l'email échoue
+      }
+    }
   }
 
   return data
