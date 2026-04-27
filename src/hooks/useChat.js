@@ -11,6 +11,7 @@ import {
 
 const MAX_HISTORY_SESSION = 20
 const MAX_HISTORY_DRMIND  = 60
+const MAX_MESSAGES_PER_SESSION = 60 // BLOC 9 — Limite de messages par session
 
 function parseTags(content) {
   let text = content
@@ -199,6 +200,14 @@ export function useChat({ onProfile, onVictory, onTTS, onSeanceComplete, mode = 
     const hasText = content && content.trim()
     if (!hasText && !fileData) return
     if (loading) return
+
+    // BLOC 9 — Vérifier la limite de messages par session
+    const messageCount = messages.filter(m => m.role === 'user').length
+    if (messageCount >= MAX_MESSAGES_PER_SESSION) {
+      setError(`Tu as atteint la limite de ${MAX_MESSAGES_PER_SESSION} messages pour cette session. Termine la session et recommence !`)
+      return
+    }
+
     setError(null)
 
     const displayText = hasText
