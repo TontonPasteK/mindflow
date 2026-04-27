@@ -92,6 +92,7 @@ export default function Session() {
         await startSession(user.id, mode)
       } catch (err) {
         console.warn('[Session] startSession failed (non-blocking):', err.message)
+        // L'erreur est déjà gérée dans useChat, pas besoin de la cacher
       }
       // BLOC 6 — streak update au démarrage
       if (isSessionPremium) {

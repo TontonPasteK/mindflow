@@ -177,10 +177,18 @@ export function useChat({ onProfile, onVictory, onTTS, onSeanceComplete, mode = 
 
     } catch (err) {
       console.error('initChat error:', err)
+
+      // Message d'erreur plus rassurant
       const fallback = mode === 'drMind'
         ? `Bonjour ! Je suis Dr Mind. On va découvrir ensemble comment tu apprends le mieux. On commence ?`
         : `Salut ! Je suis Dr Mind. Comment tu vas ? C'est quoi au programme ce soir ?`
+
       addMessage('assistant', fallback)
+
+      // Message d'erreur discret pour l'utilisateur
+      if (!err.message?.includes('Overloaded')) {
+        setError('Dr Mind a eu un petit souci de connexion, mais il est là maintenant !')
+      }
     } finally {
       setRetryStatus(null)
       setLoading(false)
@@ -345,7 +353,21 @@ export function useChat({ onProfile, onVictory, onTTS, onSeanceComplete, mode = 
 
     } catch (err) {
       console.error('sendMessage error:', err)
-      setError(err.message?.startsWith('Limite') ? err.message : 'Oups, j\'ai eu un problème. Réessaie !')
+
+      // Messages d'erreur humains et rassurants
+      let errorMessage = 'Oups, j\'ai eu un petit problème. Réessaie !'
+
+      if (err.message?.includes('Overloaded') || err.message?.includes('timeout')) {
+        errorMessage = 'Dr Mind réfléchit encore un peu... Attends 2 secondes et réessaie !'
+      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+        errorMessage = 'Hmm, la connexion semble instable. Vérifie ton internet et réessaie.'
+      } else if (err.message?.includes('Limite')) {
+        errorMessage = err.message
+      } else if (err.message?.includes('API') || err.message?.includes('rate')) {
+        errorMessage = 'Dr Mind est très demandé ! Attends quelques secondes et réessaie.'
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
