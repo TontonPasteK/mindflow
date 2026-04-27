@@ -6,6 +6,7 @@ import { createPortalSession } from '../services/stripe'
 import Button from '../components/ui/Button'
 import PlanBadge from '../components/ui/PlanBadge'
 import Modal from '../components/ui/Modal'
+import ReferralPanel from '../components/referral/ReferralPanel'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -157,6 +158,9 @@ export default function Settings() {
             </Button>
           )}
         </Section>
+
+        {/* BLOC 12 — Parrainage */}
+        <ReferralPanel />
 
         {/* Danger zone */}
         <Section title="Compte">
