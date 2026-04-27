@@ -314,9 +314,9 @@ export default function Auth() {
                   style={{ marginTop: '2px', accentColor: 'var(--accent)', flexShrink: 0 }}
                 />
                 <span>
-                  J'accepte les{' '}
-                  <Link to="/legal" target="_blank" style={{ color: 'var(--accent)' }}>CGU et la politique de confidentialité</Link>
-                  {' '}(données des mineurs protégées, RGPD)
+                  En tant que parent/tuteur, j'accepte que les données de mon enfant soient traitées conformément à notre{' '}
+                  <Link to="/legal" target="_blank" style={{ color: 'var(--accent)' }}>politique de confidentialité</Link>
+                  {' '}(RGPD, données des mineurs protégées)
                 </span>
               </label>
               {errors.cgu && <p style={{ fontSize: '12px', color: 'var(--error)', margin: '4px 0 0' }}>{errors.cgu}</p>}
