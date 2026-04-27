@@ -19,6 +19,7 @@ import ResetPassword   from '../pages/ResetPassword'
 import Legal           from '../pages/Legal'
 import Privacy         from '../pages/Privacy'
 import HowItWorks      from '../pages/HowItWorks'
+import NotFound        from '../pages/NotFound'
 
 export default function AppRoutes() {
   return (
@@ -45,7 +46,8 @@ export default function AppRoutes() {
       {/* Stripe return */}
       <Route path="/success" element={<ProtectedRoute><SuccessPage /></ProtectedRoute>} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* 404 */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
