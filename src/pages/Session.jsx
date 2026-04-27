@@ -51,6 +51,12 @@ export default function Session() {
   const [streak, setStreak]           = useState(profile?.streak ?? 0)
   const [points, setPoints]           = useState(profile?.points ?? 0)
 
+  // BLOC 1 — Timer de session 1h
+  const [sessionStartTime] = useState(Date.now())
+  const [sessionWarningShown, setSessionWarningShown] = useState(false)
+  const [sessionTimeLeft, setSessionTimeLeft] = useState(null)
+  const [sessionEnded, setSessionEnded] = useState(false)
+
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
     onPlayStart: (msgId) => setSpeakingMessageId(msgId),
@@ -134,6 +140,58 @@ export default function Session() {
       return () => clearTimeout(timer)
     }
   }, [isListening, isSpeaking, voiceMode, loading, permissionGranted, sessionReady, userPaused])
+
+  // BLOC 1 — Timer de session 1h
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - sessionStartTime
+      const elapsedMinutes = elapsed / (1000 * 60)
+
+      // Avertissement à 45 minutes
+      if (elapsedMinutes >= 45 && !sessionWarningShown && !sessionEnded) {
+        setSessionWarningShown(true)
+        setSessionTimeLeft(15) // 15 minutes restantes
+      }
+
+      // Mise à jour du temps restant chaque minute après l'avertissement
+      if (sessionWarningShown && !sessionEnded && elapsedMinutes >= 45) {
+        const remaining = Math.max(0, Math.ceil(60 - elapsedMinutes))
+        setSessionTimeLeft(remaining)
+      }
+
+      // Clôture forcée à 60 minutes
+      if (elapsedMinutes >= 60 && !sessionEnded) {
+        setSessionEnded(true)
+        clearInterval(interval)
+        handleForceSessionEnd()
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [sessionStartTime, sessionWarningShown, sessionEnded])
+
+  const handleForceSessionEnd = async () => {
+    try {
+      // Envoyer message de fin avec [[SEANCE_COMPLETE]]
+      const finalMessage = {
+        role: 'assistant',
+        content: `⏰ **Session terminée**\n\nTu as atteint la limite de 1 heure pour ce soir. C'est important pour ne pas te fatiguer et garder ton cerveau frais pour demain !\n\n[[SEANCE_COMPLETE]]`,
+        timestamp: new Date().toISOString()
+      }
+
+      // Mettre à jour les messages localement
+      // Note: on ne peut pas modifier messages directement car c'est géré par useChat
+      // On va plutôt afficher un message spécial
+
+      // Redirection après 3 secondes
+      setTimeout(() => {
+        navigate('/choice')
+      }, 3000)
+
+    } catch (err) {
+      console.error('Erreur fin session forcée:', err)
+    }
+  }
 
   // ── Document scan ────────────────────────────────────────
   const handleScan = useCallback((base64, mimeType) => {
@@ -313,6 +371,17 @@ export default function Session() {
                 )}
               </div>
             )}
+            {/* BLOC 1 — Timer de session */}
+            {sessionTimeLeft !== null && !sessionEnded && (
+              <div style={{
+                fontSize: '11px',
+                color: sessionTimeLeft <= 5 ? 'var(--error)' : 'var(--text-3)',
+                marginTop: '2px',
+                fontWeight: '500'
+              }}>
+                ⏱️ {sessionTimeLeft} min restantes
+              </div>
+            )}
           </div>
         </div>
 
@@ -446,6 +515,53 @@ export default function Session() {
         </div>
       )}
 
+      {/* BLOC 1 — Banner avertissement session */}
+      {sessionTimeLeft !== null && !sessionEnded && (
+        <div style={{
+          margin: '0 16px 8px',
+          padding: '12px 16px',
+          background: sessionTimeLeft <= 5 ? 'rgba(224,82,82,0.1)' : 'rgba(245,158,11,0.1)',
+          border: `1px solid ${sessionTimeLeft <= 5 ? 'rgba(224,82,82,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          borderRadius: 'var(--r-md)',
+          fontSize: '13px',
+          color: sessionTimeLeft <= 5 ? 'var(--error)' : '#F59E0B',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '16px' }}>⏰</span>
+          <span>
+            {sessionTimeLeft <= 5
+              ? `Attention ! Il te reste ${sessionTimeLeft} minute${sessionTimeLeft > 1 ? 's' : ''} pour ce soir.`
+              : `Il te reste ${sessionTimeLeft} minutes pour ce soir.`
+            }
+          </span>
+        </div>
+      )}
+
+      {/* BLOC 1 — Banner session terminée */}
+      {sessionEnded && (
+        <div style={{
+          margin: '0 16px 8px',
+          padding: '16px',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-md)',
+          fontSize: '14px',
+          color: 'var(--text)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>⏰</div>
+          <div style={{ fontWeight: '700', marginBottom: '8px' }}>Session terminée</div>
+          <div style={{ color: 'var(--text-2)' }}>
+            Tu as atteint la limite de 1 heure pour ce soir. C'est important pour ne pas te fatiguer !
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '12px' }}>
+            Redirection automatique...
+          </div>
+        </div>
+      )}
+
       {/* ── Avatar + Pomodoro ── */}
       <div style={{
         display: 'flex',
@@ -496,56 +612,58 @@ export default function Session() {
       )}
 
       {/* ── Zone de saisie ── */}
-      <div style={{ borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-        {inputMode === 'voice' ? (
-          <div style={{
-            padding: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '16px',
-            background: 'var(--bg-card)',
-          }}>
-            <DocumentScanner onScan={handleScan} isPremium={isSessionPremium} />
-            <VoiceButton
-              isListening={isListening}
-              isSpeaking={isSpeaking}
-              onClick={handleVoiceButton}
-              disabled={loading}
-            />
-            {/* Texte interim visible */}
-            {interimText && (
-              <div style={{
-                position: 'absolute',
-                bottom: '90px',
-                left: '16px', right: '16px',
-                padding: '10px 14px',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                fontSize: '14px',
-                color: 'var(--text-3)',
-                fontStyle: 'italic',
-              }}>
-                {interimText}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0' }}>
-            <div style={{ padding: '12px 0 12px 16px', flexShrink: 0 }}>
+      {!sessionEnded && (
+        <div style={{ borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+          {inputMode === 'voice' ? (
+            <div style={{
+              padding: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              background: 'var(--bg-card)',
+            }}>
               <DocumentScanner onScan={handleScan} isPremium={isSessionPremium} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <InputArea
-                onSend={sendMessage}
+              <VoiceButton
+                isListening={isListening}
+                isSpeaking={isSpeaking}
+                onClick={handleVoiceButton}
                 disabled={loading}
-                placeholder={`Réponds à ${avatarName}...`}
               />
+              {/* Texte interim visible */}
+              {interimText && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '90px',
+                  left: '16px', right: '16px',
+                  padding: '10px 14px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  color: 'var(--text-3)',
+                  fontStyle: 'italic',
+                }}>
+                  {interimText}
+                </div>
+              )}
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0' }}>
+              <div style={{ padding: '12px 0 12px 16px', flexShrink: 0 }}>
+                <DocumentScanner onScan={handleScan} isPremium={isSessionPremium} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <InputArea
+                  onSend={sendMessage}
+                  disabled={loading}
+                  placeholder={`Réponds à ${avatarName}...`}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Victory modal ── */}
       <VictoryModal
