@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { linkParentToChild, getLinkedChildren, getChildStats, getKnowledgeGraph, getProfile } from '../services/supabase'
+import { linkParentToChild, getLinkedChildren, getChildStats, getKnowledgeGraph, getProfile, getUserSessions } from '../services/supabase'
 import StatsCard from '../components/parent/StatsCard'
 import SubjectsList from '../components/parent/SubjectsList'
 import VictoriesJournal from '../components/parent/VictoriesJournal'
@@ -18,6 +18,7 @@ export default function ParentDashboard() {
   const [childStats, setChildStats]       = useState(null)
   const [childProfile, setChildProfile]   = useState(null)
   const [childKG, setChildKG]             = useState(null)
+  const [childSessions, setChildSessions] = useState([])
   const [loadingStats, setLoadingStats]   = useState(false)
   const [linkEmail, setLinkEmail]         = useState('')
   const [linkError, setLinkError]         = useState('')
@@ -42,14 +43,16 @@ export default function ParentDashboard() {
     setSelectedChild({ id: childId, ...childUser })
     setLoadingStats(true)
     try {
-      const [stats, kg, prof] = await Promise.allSettled([
+      const [stats, kg, prof, sessions] = await Promise.allSettled([
         getChildStats(childId),
         getKnowledgeGraph(childId),
         getProfile(childId),
+        getUserSessions(childId, 10),
       ])
       if (stats.status === 'fulfilled') setChildStats(stats.value)
       if (kg.status === 'fulfilled') setChildKG(kg.value)
       if (prof.status === 'fulfilled') setChildProfile(prof.value)
+      if (sessions.status === 'fulfilled') setChildSessions(sessions.value)
     } catch (err) {
       console.error(err)
     } finally {
@@ -79,7 +82,7 @@ export default function ParentDashboard() {
       minHeight: '100vh',
       background: 'var(--bg)',
       padding: '24px',
-      maxWidth: '760px',
+      maxWidth: '900px',
       margin: '0 auto',
     }}>
       {/* Header */}
@@ -91,7 +94,7 @@ export default function ParentDashboard() {
         animation: 'fade-up 0.4s ease',
       }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--f-title)', fontSize: '24px', marginBottom: '4px' }}>
+          <h1 style={{ fontFamily: 'var(--f-title)', fontSize: '28px', marginBottom: '4px' }}>
             Tableau de bord parent
           </h1>
           <p style={{ color: 'var(--text-2)', fontSize: '14px' }}>
@@ -118,7 +121,7 @@ export default function ParentDashboard() {
         <span style={{ fontSize: '18px', flexShrink: 0 }}>🔒</span>
         <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: 0, lineHeight: '1.6' }}>
           <strong style={{ color: 'var(--text)' }}>Confidentialité respectée.</strong>{' '}
-          Le contenu des conversations reste confidentiel entre votre enfant et Maya.
+          Le contenu des conversations reste confidentiel entre votre enfant et son assistant.
           Ce tableau de bord affiche uniquement les données de suivi anonymisées.
         </p>
       </div>
@@ -207,6 +210,11 @@ export default function ParentDashboard() {
             <LoadingSpinner />
           ) : childStats ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Résumé dernière session */}
+              {childSessions.length > 0 && (
+                <LastSessionSummary session={childSessions[0]} />
+              )}
+
               {/* Streak + Points */}
               {childProfile && (
                 <div style={{
@@ -236,13 +244,31 @@ export default function ParentDashboard() {
                   </div>
                 </div>
               )}
+
+              {/* Métriques détaillées */}
+              <DetailedMetrics sessions={childStats.sessions} kg={childKG} />
+
+              {/* Alertes engagement */}
+              <EngagementAlerts sessions={childStats.sessions} victories={childStats.victories} />
+
+              {/* Ratio participation */}
+              <ParticipationRatio victories={childStats.victories} sessions={childStats.sessions} />
+
+              {/* Historique sessions */}
+              <SessionsHistory sessions={childSessions} />
+
               <StatsCard sessions={childStats.sessions} />
               <SubjectsList sessions={childStats.sessions} />
-              {/* Ratio participation */}
-              <ParticipationRatio victories={childStats.victories} />
               <VictoriesJournal victories={childStats.victories} />
+
               {/* Knowledge Graph */}
               {childKG && <KnowledgeGraphPanel kg={childKG} />}
+
+              {/* Abonnement */}
+              {childProfile && <SubscriptionPanel profile={childProfile} />}
+
+              {/* Contact praticien */}
+              <ContactPractitioner />
             </div>
           ) : null}
         </div>
@@ -263,6 +289,310 @@ export default function ParentDashboard() {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Composants ─────────────────────────────────────────────────────────────────
+
+function LastSessionSummary({ session }) {
+  if (!session) return null
+
+  const date = new Date(session.started_at)
+  const formattedDate = date.toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  })
+  const duration = session.duree_minutes || 0
+  const matieres = session.matieres || []
+
+  return (
+    <div style={{
+      padding: '16px 20px',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-md)',
+    }}>
+      <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px', color: 'var(--text-2)' }}>
+        Dernière session
+      </div>
+      <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: '1.6', margin: 0 }}>
+        <span style={{ fontWeight: '600' }}>{formattedDate}</span> —{' '}
+        {matieres.length > 0 ? matieres.join(', ') : 'Travail général'}{' '}
+        ({duration} min). {session.resume || 'Session de travail régulière.'}
+      </p>
+    </div>
+  )
+}
+
+function DetailedMetrics({ sessions, kg }) {
+  const totalMinutes = sessions.reduce((acc, s) => acc + (s.duree_minutes || 0), 0)
+  const avgMinutes = sessions.length > 0 ? Math.round(totalMinutes / sessions.length) : 0
+  const notionsMaitrisees = kg?.notions_maitrisees?.length || 0
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gap: '12px',
+    }}>
+      <MetricItem
+        icon="📊"
+        value={sessions.length}
+        label="Sessions ce mois"
+      />
+      <MetricItem
+        icon="✅"
+        value={notionsMaitrisees}
+        label="Notions maîtrisées"
+      />
+      <MetricItem
+        icon="⏱"
+        value={`${avgMinutes} min`}
+        label="Temps moyen"
+      />
+    </div>
+  )
+}
+
+function MetricItem({ icon, value, label }) {
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-lg)',
+      padding: '16px',
+      textAlign: 'center',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '6px',
+    }}>
+      <span style={{ fontSize: '20px' }}>{icon}</span>
+      <span style={{
+        fontSize: '22px',
+        fontWeight: '700',
+        fontFamily: 'var(--f-title)',
+        color: 'var(--accent)',
+        lineHeight: 1,
+      }}>{value}</span>
+      <span style={{
+        fontSize: '12px',
+        color: 'var(--text-3)',
+        textAlign: 'center',
+        lineHeight: '1.4',
+      }}>{label}</span>
+    </div>
+  )
+}
+
+function EngagementAlerts({ sessions, victories }) {
+  const alerts = []
+
+  // Engagement suspect
+  if (sessions.length === 0) {
+    alerts.push({ type: 'warning', text: 'Aucune session cette semaine. Encouragez votre enfant à travailler.' })
+  } else if (sessions.length < 2) {
+    alerts.push({ type: 'info', text: 'Engagement léger. Une session par semaine serait idéale.' })
+  } else {
+    alerts.push({ type: 'success', text: 'Engagement sain. Continuez comme ça !' })
+  }
+
+  // Matière fragile
+  const subjectCounts = {}
+  sessions.forEach(s => {
+    (s.matieres || []).forEach(m => {
+      subjectCounts[m] = (subjectCounts[m] || 0) + 1
+    })
+  })
+
+  const weakSubjects = Object.entries(subjectCounts)
+    .filter(([_, count]) => count < 2)
+    .map(([subject]) => subject)
+
+  if (weakSubjects.length > 0) {
+    alerts.push({
+      type: 'warning',
+      text: `Matière fragile : ${weakSubjects.join(', ')}. Plus de travail recommandé.`
+    })
+  }
+
+  if (alerts.length === 0) return null
+
+  return (
+    <div style={{
+      padding: '14px 18px',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-md)',
+    }}>
+      <div style={{ fontWeight: '600', marginBottom: '10px', fontSize: '14px' }}>Alertes</div>
+      {alerts.map((alert, i) => (
+        <div
+          key={i}
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '8px 12px',
+            background: alert.type === 'success' ? 'var(--accent-dim)' :
+                       alert.type === 'warning' ? 'rgba(239, 68, 68, 0.1)' :
+                       'var(--bg-2)',
+            borderRadius: 'var(--r-sm)',
+            marginBottom: i < alerts.length - 1 ? '8px' : 0,
+            fontSize: '13px',
+            color: alert.type === 'success' ? 'var(--accent)' :
+                   alert.type === 'warning' ? 'var(--error)' :
+                   'var(--text-2)',
+          }}
+        >
+          <span style={{ flexShrink: 0 }}>
+            {alert.type === 'success' ? '✅' : alert.type === 'warning' ? '⚠️' : 'ℹ️'}
+          </span>
+          {alert.text}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ParticipationRatio({ victories, sessions }) {
+  if (!victories || victories.length === 0) {
+    return (
+      <div style={{
+        padding: '14px 18px',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--r-md)',
+      }}>
+        <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>Ratio participation</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7' }}>
+          Pas assez de données pour évaluer le ratio.
+        </div>
+      </div>
+    )
+  }
+
+  const totalSessions = sessions?.length || 1
+  const victoryRate = Math.round((victories.length / totalSessions) * 100)
+
+  let status = 'sain'
+  let statusText = 'Ratio sain'
+  let statusColor = 'var(--accent)'
+
+  if (victoryRate < 30) {
+    status = 'suspect'
+    statusText = 'Ratio suspect — participation faible'
+    statusColor = 'var(--error)'
+  } else if (victoryRate > 80) {
+    status = 'excellent'
+    statusText = 'Ratio excellent — très bonne participation'
+    statusColor = 'var(--accent)'
+  }
+
+  return (
+    <div style={{
+      padding: '14px 18px',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-md)',
+    }}>
+      <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>Ratio participation</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7' }}>
+        <span style={{ color: statusColor, fontWeight: '600' }}>{victoryRate}%</span> de sessions avec victoires.{' '}
+        <span style={{ color: statusColor }}>{statusText}</span>
+      </div>
+      <div style={{
+        marginTop: '10px',
+        height: '6px',
+        background: 'var(--bg-2)',
+        borderRadius: '3px',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          width: `${victoryRate}%`,
+          height: '100%',
+          background: statusColor,
+          borderRadius: '3px',
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+    </div>
+  )
+}
+
+function SessionsHistory({ sessions }) {
+  if (!sessions || sessions.length === 0) {
+    return (
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--r-lg)',
+        padding: '24px',
+        textAlign: 'center',
+        color: 'var(--text-3)',
+        fontSize: '14px',
+      }}>
+        Aucune session enregistrée
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-lg)',
+      padding: '20px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    }}>
+      <h4 style={{ fontSize: '14px', color: 'var(--text-2)', fontWeight: '600' }}>
+        Historique des sessions
+      </h4>
+
+      {sessions.map((session, i) => {
+        const date = new Date(session.started_at)
+        const formattedDate = date.toLocaleDateString('fr-FR', {
+          day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+        })
+        const matieres = session.matieres || []
+        const duration = session.duree_minutes || 0
+
+        return (
+          <div
+            key={session.id}
+            style={{
+              display: 'flex',
+              gap: '12px',
+              padding: '12px',
+              background: 'var(--bg-2)',
+              borderRadius: 'var(--r-md)',
+              border: '1px solid var(--border)',
+              animation: `fade-up 0.3s ease ${i * 0.05}s both`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '14px', color: 'var(--text)', fontWeight: '500', marginBottom: '4px' }}>
+                {matieres.length > 0 ? matieres.join(', ') : 'Travail général'}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+                {formattedDate} · {duration} min
+              </div>
+            </div>
+            <div style={{
+              padding: '4px 10px',
+              background: 'var(--accent-dim)',
+              color: 'var(--accent)',
+              borderRadius: '12px',
+              fontSize: '11px',
+              fontWeight: '600',
+              alignSelf: 'center',
+            }}>
+              {session.ended_at ? 'Terminée' : 'En cours'}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -326,6 +656,85 @@ function KnowledgeGraphPanel({ kg }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function SubscriptionPanel({ profile }) {
+  const plan = profile.plan || 'free'
+  const isPremium = plan === 'premium'
+
+  return (
+    <div style={{
+      padding: '16px 20px',
+      background: isPremium ? 'linear-gradient(135deg, #0E1F16, var(--bg-card))' : 'var(--bg-card)',
+      border: isPremium ? '1px solid var(--border-h)' : '1px solid var(--border)',
+      borderRadius: 'var(--r-md)',
+    }}>
+      <div style={{ fontWeight: '600', marginBottom: '10px', fontSize: '14px', color: 'var(--text-2)' }}>
+        Abonnement
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: '16px', fontWeight: '700', color: isPremium ? 'var(--accent)' : 'var(--text)' }}>
+            {isPremium ? 'Premium' : 'Gratuit'}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '2px' }}>
+            {isPremium ? '19€/mois · Sans engagement' : 'Fonctionnalités limitées'}
+          </div>
+        </div>
+        {!isPremium && (
+          <button
+            onClick={() => window.location.href = '/pricing'}
+            style={{
+              padding: '8px 16px',
+              background: 'var(--accent)',
+              color: '#080D0A',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+          >
+            Passer Premium
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ContactPractitioner() {
+  return (
+    <div style={{
+      padding: '16px 20px',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r-md)',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px', color: 'var(--text-2)' }}>
+        Besoin d'aide ?
+      </div>
+      <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px', lineHeight: '1.6' }}>
+        Contactez le praticien pour discuter de la progression de votre enfant.
+      </p>
+      <a
+        href="mailto:scolrcoaching@gmail.com"
+        style={{
+          display: 'inline-block',
+          padding: '10px 20px',
+          background: 'var(--accent)',
+          color: '#080D0A',
+          textDecoration: 'none',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '600',
+        }}
+      >
+        Contacter le praticien
+      </a>
     </div>
   )
 }
