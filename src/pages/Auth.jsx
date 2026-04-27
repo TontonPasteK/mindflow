@@ -48,7 +48,8 @@ export default function Auth() {
   const validate = () => {
     const errs = {}
     if (mode === 'signup' && !form.prenom.trim()) errs.prenom = 'Ton prénom est requis'
-    if (mode === 'signup' && !form.niveau)        errs.niveau = 'Choisis ton niveau'
+    // Niveau requis seulement pour les élèves
+    if (mode === 'signup' && !form.isParent && !form.niveau) errs.niveau = 'Choisis ton niveau'
     if (!form.email.trim())    errs.email    = 'L\'email est requis'
     if (!form.password)        errs.password = 'Le mot de passe est requis'
     if (mode === 'signup' && form.password.length < 8)
@@ -206,42 +207,6 @@ export default function Auth() {
                 required
                 autoFocus
               />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{
-                  fontSize: '13px', fontWeight: '500',
-                  color: errors.niveau ? 'var(--error)' : 'var(--text-2)',
-                }}>
-                  Niveau scolaire <span style={{ color: 'var(--accent)' }}>*</span>
-                </label>
-                <select
-                  value={form.niveau}
-                  onChange={update('niveau')}
-                  required
-                  style={{
-                    background: 'var(--bg-input)',
-                    border: `1px solid ${errors.niveau ? 'var(--error)' : 'var(--border)'}`,
-                    borderRadius: 'var(--r-md)',
-                    color: form.niveau ? 'var(--text)' : 'var(--text-3)',
-                    padding: '13px 16px',
-                    fontSize: '15px',
-                    width: '100%',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23DFF0E8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 14px center',
-                  }}
-                >
-                  <option value="" disabled>Choisis ton niveau</option>
-                  {NIVEAUX.map(n => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-                {errors.niveau && (
-                  <p style={{ fontSize: '12px', color: 'var(--error)', margin: 0 }}>{errors.niveau}</p>
-                )}
-              </div>
 
               {/* Toggle Parent/Élève */}
               <div style={{
@@ -286,6 +251,46 @@ export default function Auth() {
                   👨‍👩‍👧‍👦 Je suis un parent
                 </button>
               </div>
+
+              {/* Niveau scolaire — seulement pour les élèves */}
+              {!form.isParent && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{
+                  fontSize: '13px', fontWeight: '500',
+                  color: errors.niveau ? 'var(--error)' : 'var(--text-2)',
+                }}>
+                  Niveau scolaire <span style={{ color: 'var(--accent)' }}>*</span>
+                </label>
+                <select
+                  value={form.niveau}
+                  onChange={update('niveau')}
+                  required
+                  style={{
+                    background: 'var(--bg-input)',
+                    border: `1px solid ${errors.niveau ? 'var(--error)' : 'var(--border)'}`,
+                    borderRadius: 'var(--r-md)',
+                    color: form.niveau ? 'var(--text)' : 'var(--text-3)',
+                    padding: '13px 16px',
+                    fontSize: '15px',
+                    width: '100%',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23DFF0E8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 14px center',
+                  }}
+                >
+                  <option value="" disabled>Choisis ton niveau</option>
+                  {NIVEAUX.map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+                {errors.niveau && (
+                  <p style={{ fontSize: '12px', color: 'var(--error)', margin: 0 }}>{errors.niveau}</p>
+                )}
+              </div>
+              )}
             </>
           )}
           <Input
