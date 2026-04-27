@@ -315,7 +315,7 @@ export default function Auth() {
                 />
                 <span>
                   En tant que parent/tuteur, j'accepte que les données de mon enfant soient traitées conformément à notre{' '}
-                  <Link to="/legal" target="_blank" style={{ color: 'var(--accent)' }}>politique de confidentialité</Link>
+                  <Link to="/privacy" target="_blank" style={{ color: 'var(--accent)' }}>politique de confidentialité</Link>
                   {' '}(RGPD, données des mineurs protégées)
                 </span>
               </label>

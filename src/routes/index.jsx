@@ -16,6 +16,7 @@ import Pricing         from '../pages/Pricing'
 import Settings        from '../pages/Settings'
 import ResetPassword   from '../pages/ResetPassword'
 import Legal           from '../pages/Legal'
+import Privacy         from '../pages/Privacy'
 
 export default function AppRoutes() {
   return (
@@ -26,6 +27,7 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/legal" element={<Legal />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Protected */}
       <Route path="/choice"            element={<ProtectedRoute><Choice /></ProtectedRoute>} />
