@@ -3,9 +3,9 @@
  * Reçoit les événements Lemon Squeezy et met à jour le plan dans Supabase.
  *
  * Événements gérés :
- *   subscription_created → plan = 'premium'
- *   subscription_resumed  → plan = 'premium'
- *   subscription_expired  → plan = 'free'
+ *   subscription_created → is_premium = true
+ *   subscription_resumed  → is_premium = true
+ *   subscription_expired  → is_premium = false
  *   subscription_cancelled → pas d'action immédiate (accès jusqu'à la fin de période)
  *
  * Ajouter LEMONSQUEEZY_WEBHOOK_SECRET dans Vercel env + dans le dashboard LS.
@@ -75,22 +75,22 @@ export default async function handler(req, res) {
       case 'subscription_resumed': {
         if (!userId) { console.warn('[ls-webhook] user_id absent'); break }
         const { error } = await supabase
-          .from('users')
-          .update({ plan: 'premium' })
-          .eq('id', userId)
+          .from('profiles')
+          .update({ is_premium: true })
+          .eq('user_id', userId)
         if (error) throw error
-        console.log('[ls-webhook] Plan → premium pour', userId)
+        console.log('[ls-webhook] is_premium → true pour', userId)
         break
       }
 
       case 'subscription_expired': {
         if (!userId) { console.warn('[ls-webhook] user_id absent'); break }
         const { error } = await supabase
-          .from('users')
-          .update({ plan: 'free' })
-          .eq('id', userId)
+          .from('profiles')
+          .update({ is_premium: false })
+          .eq('user_id', userId)
         if (error) throw error
-        console.log('[ls-webhook] Plan → free pour', userId)
+        console.log('[ls-webhook] is_premium → false pour', userId)
         break
       }
 
