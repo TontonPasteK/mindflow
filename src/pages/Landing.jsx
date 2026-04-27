@@ -107,14 +107,61 @@ export default function Landing() {
         </button>
       </div>
 
-      {/* Footer simple */}
+      {/* Footer avec liens légaux */}
       <div style={{
         marginTop: 'auto',
         fontSize: '13px',
         color: '#64748B',
         animation: 'fadeIn 0.8s ease-out 0.4s both',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        alignItems: 'center',
       }}>
-        © 2026 Evokia — Tous droits réservés
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            onClick={() => navigate('/legal')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#64748B',
+              cursor: 'pointer',
+              fontSize: '13px',
+              textDecoration: 'underline',
+            }}
+          >
+            Mentions légales
+          </button>
+          <button
+            onClick={() => navigate('/privacy')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#64748B',
+              cursor: 'pointer',
+              fontSize: '13px',
+              textDecoration: 'underline',
+            }}
+          >
+            Confidentialité
+          </button>
+          <button
+            onClick={() => navigate('/how-it-works')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#64748B',
+              cursor: 'pointer',
+              fontSize: '13px',
+              textDecoration: 'underline',
+            }}
+          >
+            Comment ça marche
+          </button>
+        </div>
+        <div>
+          © 2026 Evokia — Tous droits réservés
+        </div>
       </div>
 
       <style>{`

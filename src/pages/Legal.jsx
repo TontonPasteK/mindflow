@@ -23,13 +23,29 @@ export default function Legal() {
       >← Retour</button>
 
       <h1 style={{ fontFamily: 'var(--f-title)', fontSize: '26px', marginBottom: '8px' }}>
-        Mentions légales &amp; Confidentialité
+        Mentions légales & Confidentialité
       </h1>
       <p style={{ color: 'var(--text-3)', fontSize: '13px', marginBottom: '40px' }}>
         Dernière mise à jour : avril 2026
       </p>
 
-      <Section title="1. Conditions générales d'utilisation">
+      <Section title="1. Éditeur du service">
+        <P><strong>Nom :</strong> Evokia</P>
+        <P><strong>Forme juridique :</strong> Auto-entrepreneur</P>
+        <P><strong>Responsable de publication :</strong> Scolr Coaching</P>
+        <P><strong>Contact :</strong> scolrcoaching@gmail.com</P>
+        <P><strong>Siège social :</strong> France</P>
+        <P><strong>SIRET :</strong> [À compléter]</P>
+        <P><strong>Numéro TVA intracommunautaire :</strong> [À compléter]</P>
+      </Section>
+
+      <Section title="2. Hébergeur">
+        <P><strong>Prestataire :</strong> Vercel Inc.</P>
+        <P><strong>Adresse :</strong> 340 S Lemon Ave #4133, Walnut, CA 91789, USA</P>
+        <P><strong>Conformité :</strong> Vercel est conforme au RGPD et héberge les données en Union Européenne.</P>
+      </Section>
+
+      <Section title="3. Conditions générales d'utilisation">
         <P><strong>Inscription :</strong> Le compte Evokia est créé par un parent ou un adulte majeur (+18 ans). Les mineurs accèdent via un code fourni par leur parent.</P>
         <P><strong>Utilisation :</strong> Evokia est un outil de coaching cognitif et d'aide aux devoirs destiné aux collégiens, lycéens et adultes en formation. Ce n'est pas un diagnostic médical, un substitut professionnel de santé ou un service éducatif agréé.</P>
         <P><strong>Ce que l'app fait :</strong> accompagnement cognitif basé sur la méthode Pastek, aide aux devoirs guidée par questions, profil d'apprentissage personnalisé.</P>
@@ -37,7 +53,7 @@ export default function Legal() {
         <P><strong>Résiliation :</strong> à tout moment depuis les paramètres du compte. Les données sont supprimées sous 30 jours après demande de suppression à scolrcoaching@gmail.com.</P>
       </Section>
 
-      <Section title="2. Politique de confidentialité (RGPD — mineurs)">
+      <Section title="4. Politique de confidentialité (RGPD — mineurs)">
         <P><strong>Responsable du traitement :</strong> Evokia — scolrcoaching@gmail.com</P>
 
         <P><strong>Données collectées :</strong></P>
@@ -73,12 +89,20 @@ export default function Legal() {
         <P><strong>Droits des mineurs :</strong> le parent peut à tout moment demander la suppression totale du compte de son enfant.</P>
       </Section>
 
-      <Section title="3. Cookies et traceurs">
+      <Section title="5. Cookies et traceurs">
         <P>Evokia utilise uniquement des cookies techniques nécessaires au fonctionnement (authentification Supabase). Aucun cookie publicitaire ou de tracking tiers.</P>
+        <P><strong>Refus des cookies :</strong> Vous pouvez refuser les cookies via les paramètres de votre navigateur. Cela peut affecter certaines fonctionnalités de l'application.</P>
+      </Section>
+
+      <Section title="6. Protection des mineurs">
+        <P><strong>Consentement parental :</strong> L'inscription d'un mineur nécessite le consentement explicite de son parent ou tuteur légal.</P>
+        <P><strong>Accès parental :</strong> Les parents ont accès au tableau de bord pour suivre les progrès de leur enfant, mais pas au contenu des conversations.</P>
+        <P><strong>Signalement :</strong> Tout contenu inapproprié peut être signalé à scolrcoaching@gmail.com.</P>
       </Section>
 
       <div style={{ marginTop: '48px', padding: '16px', background: 'var(--bg-card)', borderRadius: 'var(--r-md)', fontSize: '13px', color: 'var(--text-3)' }}>
-        Contact RGPD : scolrcoaching@gmail.com
+        <strong>Contact RGPD :</strong> scolrcoaching@gmail.com<br/>
+        <strong>Droit de réclamation :</strong> Vous avez le droit de déposer une réclamation auprès de la CNIL (Commission Nationale de l'Informatique et des Libertés).
       </div>
     </div>
   )
