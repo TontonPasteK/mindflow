@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { getReferralCode, createReferralCode, getReferralStats } from '../services/referral'
+import { useAuth } from '../../context/AuthContext'
+import { getReferralCode, createReferralCode, getReferralStats } from '../../services/referral'
 
 export default function ReferralPanel() {
   const { user } = useAuth()
