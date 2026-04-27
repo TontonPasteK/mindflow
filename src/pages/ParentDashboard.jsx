@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../services/supabase'
 import { linkParentToChild, getLinkedChildren, getChildStats, getKnowledgeGraph, getProfile, getUserSessions } from '../services/supabase'
 import StatsCard from '../components/parent/StatsCard'
 import SubjectsList from '../components/parent/SubjectsList'
@@ -24,6 +25,13 @@ export default function ParentDashboard() {
   const [linkError, setLinkError]         = useState('')
   const [linkLoading, setLinkLoading]     = useState(false)
   const [linkSuccess, setLinkSuccess]     = useState(false)
+
+  // BLOC 2 — Mode édition profil enfant
+  const [editMode, setEditMode]           = useState(false)
+  const [editForm, setEditForm]           = useState({ prenom: '', niveau: '', avatar: '' })
+  const [editLoading, setEditLoading]     = useState(false)
+  const [editError, setEditError]         = useState('')
+  const [editSuccess, setEditSuccess]     = useState(false)
 
   useEffect(() => {
     if (user) loadChildren()
@@ -74,6 +82,49 @@ export default function ParentDashboard() {
       setLinkError(err.message || 'Erreur lors de la liaison')
     } finally {
       setLinkLoading(false)
+    }
+  }
+
+  // BLOC 2 — Gestion édition profil enfant
+  const handleEditProfile = () => {
+    if (!childProfile) return
+    setEditForm({
+      prenom: childProfile.prenom || '',
+      niveau: childProfile.niveau || '',
+      avatar: childProfile.avatar || ''
+    })
+    setEditMode(true)
+    setEditError('')
+    setEditSuccess(false)
+  }
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    if (!selectedChild?.id) return
+
+    setEditLoading(true)
+    setEditError('')
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          prenom: editForm.prenom,
+          niveau: editForm.niveau,
+          avatar: editForm.avatar
+        })
+        .eq('user_id', selectedChild.id)
+
+      if (error) throw error
+
+      setEditSuccess(true)
+      setEditMode(false)
+
+      // Recharger les données
+      await selectChild(selectedChild.id, selectedChild)
+    } catch (err) {
+      setEditError(err.message || 'Erreur lors de la modification')
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -202,8 +253,28 @@ export default function ParentDashboard() {
             fontSize: '18px',
             marginBottom: '16px',
             color: 'var(--text-2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
           }}>
-            {selectedChild.prenom} · 7 derniers jours
+            <span>{selectedChild.prenom} · 7 derniers jours</span>
+            {/* BLOC 2 — Bouton modifier profil */}
+            <button
+              onClick={handleEditProfile}
+              style={{
+                padding: '4px 10px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text-3)',
+                fontSize: '12px',
+                cursor: 'pointer',
+                fontWeight: '500',
+              }}
+              title="Modifier le profil"
+            >
+              ✏️ Modifier
+            </button>
           </h2>
 
           {loadingStats ? (
@@ -271,6 +342,155 @@ export default function ParentDashboard() {
               <ContactPractitioner />
             </div>
           ) : null}
+        </div>
+      )}
+
+      {/* BLOC 2 — Modal édition profil */}
+      {editMode && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px',
+        }}>
+          <div style={{
+            background: 'var(--bg)',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '100%',
+            border: '1px solid var(--border)',
+          }}>
+            <h3 style={{
+              fontFamily: 'var(--f-title)',
+              fontSize: '18px',
+              marginBottom: '16px',
+              color: 'var(--text)',
+            }}>
+              Modifier le profil de {selectedChild?.prenom}
+            </h3>
+
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{
+                  fontSize: '13px', fontWeight: '500',
+                  color: 'var(--text-2)', marginBottom: '6px', display: 'block',
+                }}>
+                  Prénom
+                </label>
+                <Input
+                  value={editForm.prenom}
+                  onChange={e => setEditForm(f => ({ ...f, prenom: e.target.value }))}
+                  placeholder="Prénom"
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  fontSize: '13px', fontWeight: '500',
+                  color: 'var(--text-2)', marginBottom: '6px', display: 'block',
+                }}>
+                  Niveau scolaire
+                </label>
+                <select
+                  value={editForm.niveau}
+                  onChange={e => setEditForm(f => ({ ...f, niveau: e.target.value }))}
+                  required
+                  style={{
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-md)',
+                    color: editForm.niveau ? 'var(--text)' : 'var(--text-3)',
+                    padding: '13px 16px',
+                    fontSize: '15px',
+                    width: '100%',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="" disabled>Choisir le niveau</option>
+                  {['CM2', '6e', '5e', '4e', '3e', '2nde', '1ère', 'Terminale', 'Étudiant', 'Adulte'].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{
+                  fontSize: '13px', fontWeight: '500',
+                  color: 'var(--text-2)', marginBottom: '6px', display: 'block',
+                }}>
+                  Avatar
+                </label>
+                <select
+                  value={editForm.avatar}
+                  onChange={e => setEditForm(f => ({ ...f, avatar: e.target.value }))}
+                  style={{
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-md)',
+                    color: editForm.avatar ? 'var(--text)' : 'var(--text-3)',
+                    padding: '13px 16px',
+                    fontSize: '15px',
+                    width: '100%',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Par défaut</option>
+                  {['Max', 'Victor', 'Léo', 'Maya', 'Noa', 'Sam', 'Alex'].map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              </div>
+
+              {editError && (
+                <p style={{
+                  fontSize: '13px',
+                  color: 'var(--error)',
+                  padding: '10px 14px',
+                  background: 'var(--error-dim)',
+                  borderRadius: 'var(--r-sm)',
+                  margin: 0,
+                }}>{editError}</p>
+              )}
+
+              {editSuccess && (
+                <p style={{
+                  fontSize: '13px',
+                  color: 'var(--accent)',
+                  padding: '10px 14px',
+                  background: 'rgba(29,158,117,0.1)',
+                  borderRadius: 'var(--r-sm)',
+                  margin: 0,
+                }}>Profil modifié avec succès !</p>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setEditMode(false)}
+                  disabled={editLoading}
+                  style={{ flex: 1 }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  loading={editLoading}
+                  style={{ flex: 1 }}
+                >
+                  Enregistrer
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
