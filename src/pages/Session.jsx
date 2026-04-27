@@ -61,6 +61,10 @@ export default function Session() {
   const [showResumeSession, setShowResumeSession] = useState(false)
   const [lastSessionResume, setLastSessionResume] = useState(null)
 
+  // BLOC 5 — Mode session courte 15min
+  const [shortSessionMode, setShortSessionMode] = useState(false)
+  const [shortSessionWarningShown, setShortSessionWarningShown] = useState(false)
+
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
     onPlayStart: (msgId) => setSpeakingMessageId(msgId),
@@ -171,35 +175,60 @@ export default function Session() {
       const elapsed = Date.now() - sessionStartTime
       const elapsedMinutes = elapsed / (1000 * 60)
 
-      // Avertissement à 45 minutes
-      if (elapsedMinutes >= 45 && !sessionWarningShown && !sessionEnded) {
-        setSessionWarningShown(true)
-        setSessionTimeLeft(15) // 15 minutes restantes
-      }
+      // Mode session courte 15min
+      if (shortSessionMode) {
+        // Avertissement à 10 minutes
+        if (elapsedMinutes >= 10 && !shortSessionWarningShown && !sessionEnded) {
+          setShortSessionWarningShown(true)
+          setSessionTimeLeft(5) // 5 minutes restantes
+        }
 
-      // Mise à jour du temps restant chaque minute après l'avertissement
-      if (sessionWarningShown && !sessionEnded && elapsedMinutes >= 45) {
-        const remaining = Math.max(0, Math.ceil(60 - elapsedMinutes))
-        setSessionTimeLeft(remaining)
-      }
+        // Mise à jour du temps restant après l'avertissement
+        if (shortSessionWarningShown && !sessionEnded && elapsedMinutes >= 10) {
+          const remaining = Math.max(0, Math.ceil(15 - elapsedMinutes))
+          setSessionTimeLeft(remaining)
+        }
 
-      // Clôture forcée à 60 minutes
-      if (elapsedMinutes >= 60 && !sessionEnded) {
-        setSessionEnded(true)
-        clearInterval(interval)
-        handleForceSessionEnd()
+        // Clôture forcée à 15 minutes
+        if (elapsedMinutes >= 15 && !sessionEnded) {
+          setSessionEnded(true)
+          clearInterval(interval)
+          handleForceSessionEnd()
+        }
+      } else {
+        // Mode normal 1h
+        // Avertissement à 45 minutes
+        if (elapsedMinutes >= 45 && !sessionWarningShown && !sessionEnded) {
+          setSessionWarningShown(true)
+          setSessionTimeLeft(15) // 15 minutes restantes
+        }
+
+        // Mise à jour du temps restant chaque minute après l'avertissement
+        if (sessionWarningShown && !sessionEnded && elapsedMinutes >= 45) {
+          const remaining = Math.max(0, Math.ceil(60 - elapsedMinutes))
+          setSessionTimeLeft(remaining)
+        }
+
+        // Clôture forcée à 60 minutes
+        if (elapsedMinutes >= 60 && !sessionEnded) {
+          setSessionEnded(true)
+          clearInterval(interval)
+          handleForceSessionEnd()
+        }
       }
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [sessionStartTime, sessionWarningShown, sessionEnded])
+  }, [sessionStartTime, sessionWarningShown, sessionEnded, shortSessionMode, shortSessionWarningShown])
 
   const handleForceSessionEnd = async () => {
     try {
       // Envoyer message de fin avec [[SEANCE_COMPLETE]]
       const finalMessage = {
         role: 'assistant',
-        content: `⏰ **Session terminée**\n\nTu as atteint la limite de 1 heure pour ce soir. C'est important pour ne pas te fatiguer et garder ton cerveau frais pour demain !\n\n[[SEANCE_COMPLETE]]`,
+        content: shortSessionMode
+          ? `⏰ **Session courte terminée**\n\nTu as atteint la limite de 15 minutes. C'est parfait pour une session de fatigue !\n\n[[SEANCE_COMPLETE]]`
+          : `⏰ **Session terminée**\n\nTu as atteint la limite de 1 heure pour ce soir. C'est important pour ne pas te fatiguer et garder ton cerveau frais pour demain !\n\n[[SEANCE_COMPLETE]]`,
         timestamp: new Date().toISOString()
       }
 
@@ -463,6 +492,22 @@ export default function Session() {
             </select>
           )}
 
+          {/* BLOC 5 — Mode session courte 15min */}
+          <button
+            onClick={() => setShortSessionMode(!shortSessionMode)}
+            title={shortSessionMode ? "Désactiver le mode session courte" : "Activer le mode session courte (15min)"}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '8px',
+              background: shortSessionMode ? 'rgba(245,158,11,0.1)' : 'var(--bg-card)',
+              border: `1px solid ${shortSessionMode ? '#F59E0B' : 'var(--border)'}`,
+              color: shortSessionMode ? '#F59E0B' : 'var(--text-3)',
+              cursor: 'pointer', fontSize: '12px', fontWeight: '500',
+            }}
+          >
+            {shortSessionMode ? '⚡ 15min ON' : '⚡ 15min'}
+          </button>
+
           {/* BLOC 5 — Victoires récentes */}
           {isSessionPremium && recentVictories.length > 0 && (
             <button
@@ -556,8 +601,8 @@ export default function Session() {
           <span style={{ fontSize: '16px' }}>⏰</span>
           <span>
             {sessionTimeLeft <= 5
-              ? `Attention ! Il te reste ${sessionTimeLeft} minute${sessionTimeLeft > 1 ? 's' : ''} pour ce soir.`
-              : `Il te reste ${sessionTimeLeft} minutes pour ce soir.`
+              ? `Attention ! Il te reste ${sessionTimeLeft} minute${sessionTimeLeft > 1 ? 's' : ''} pour ce${shortSessionMode ? 'tte session courte' : ' soir'}.`
+              : `Il te reste ${sessionTimeLeft} minutes pour ce${shortSessionMode ? 'tte session courte' : ' soir'}.`
             }
           </span>
         </div>
@@ -576,9 +621,14 @@ export default function Session() {
           textAlign: 'center',
         }}>
           <div style={{ fontSize: '32px', marginBottom: '8px' }}>⏰</div>
-          <div style={{ fontWeight: '700', marginBottom: '8px' }}>Session terminée</div>
+          <div style={{ fontWeight: '700', marginBottom: '8px' }}>
+            {shortSessionMode ? 'Session courte terminée' : 'Session terminée'}
+          </div>
           <div style={{ color: 'var(--text-2)' }}>
-            Tu as atteint la limite de 1 heure pour ce soir. C'est important pour ne pas te fatiguer !
+            {shortSessionMode
+              ? 'Tu as atteint la limite de 15 minutes. C\'est parfait pour une session de fatigue !'
+              : 'Tu as atteint la limite de 1 heure pour ce soir. C\'est important pour ne pas te fatiguer !'
+            }
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '12px' }}>
             Redirection automatique...
