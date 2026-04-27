@@ -41,6 +41,33 @@ export default function Landing() {
         </p>
       </div>
 
+      {/* Lien Comment ça marche */}
+      <div style={{
+        animation: 'fadeIn 0.8s ease-out 0.3s both',
+      }}>
+        <button
+          onClick={() => navigate('/how-it-works')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#10B981',
+            cursor: 'pointer',
+            fontSize: '15px',
+            fontWeight: '600',
+            textDecoration: 'underline',
+            padding: '8px 0',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = '#059669'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = '#10B981'
+          }}
+        >
+          Comment ça marche ? →
+        </button>
+      </div>
+
       {/* Boutons */}
       <div style={{
         display: 'flex',
