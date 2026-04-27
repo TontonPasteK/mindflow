@@ -597,25 +597,6 @@ function SessionsHistory({ sessions }) {
   )
 }
 
-function ParticipationRatio({ victories }) {
-  if (!victories || victories.length === 0) return null
-  return (
-    <div style={{
-      padding: '14px 18px',
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--r-md)',
-    }}>
-      <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>Activité</div>
-      <div style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.7' }}>
-        <span style={{ color: 'var(--accent)', fontWeight: '600' }}>{victories.length}</span> victoire{victories.length > 1 ? 's' : ''} enregistrée{victories.length > 1 ? 's' : ''}.
-        {victories.length >= 3 && ' Bonne dynamique d\'apprentissage.'}
-        {victories.length < 3 && victories.length > 0 && ' Encouragez votre enfant à continuer !'}
-      </div>
-    </div>
-  )
-}
-
 function KnowledgeGraphPanel({ kg }) {
   if (!kg) return null
   const maitrisees = kg.notions_maitrisees || []
