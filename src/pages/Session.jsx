@@ -68,6 +68,9 @@ export default function Session() {
   // BLOC 6 — Persistance conversation
   const [sessionPersisted, setSessionPersisted] = useState(false)
 
+  // BLOC 10 — Confirmation avant de quitter
+  const [hasUnsavedWork, setHasUnsavedWork] = useState(false)
+
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
     onPlayStart: (msgId) => setSpeakingMessageId(msgId),
@@ -157,6 +160,11 @@ export default function Session() {
       const sessionKey = `session_messages_${user.id}_${sessionId}`
       localStorage.setItem(sessionKey, JSON.stringify(messages))
       setSessionPersisted(true)
+
+      // BLOC 10 — Marquer qu'il y a du travail non sauvegardé
+      if (messages.length > 2) {
+        setHasUnsavedWork(true)
+      }
     }
   }, [messages, user, sessionId])
 
@@ -189,6 +197,23 @@ export default function Session() {
       }
     }
   }, [user, sessionId])
+
+  // BLOC 10 — Confirmation avant de quitter
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedWork && !sessionEnded) {
+        e.preventDefault()
+        e.returnValue = 'Tu as du travail en cours. Veux-tu vraiment quitter ?'
+        return 'Tu as du travail en cours. Veux-tu vraiment quitter ?'
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [hasUnsavedWork, sessionEnded])
 
   // ── Micro en mode parler ─────────────────────────────────
   useEffect(() => {
@@ -295,6 +320,9 @@ export default function Session() {
 
   // ── Fin de session ───────────────────────────────────────
   const handleEndSession = useCallback(async () => {
+    // BLOC 10 — Réinitialiser le flag de travail non sauvegardé
+    setHasUnsavedWork(false)
+
     const lastMessage = messages.findLast(m => m.role === 'assistant')
     await closeSession({ resume: lastMessage?.content?.substring(0, 200) })
     navigate('/choice')
