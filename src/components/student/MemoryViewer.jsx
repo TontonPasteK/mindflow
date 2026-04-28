@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { useMem0 } from '../hooks/useMem0'
-import { getAllMemories, deleteMemory } from '../services/mem0'
+import { useAuth } from '../../context/AuthContext'
+import { useMem0 } from '../../hooks/useMem0'
+import { getAllMemories, deleteMemory } from '../../services/mem0'
 
 /**
  * Composant pour visualiser et gérer les mémoires Mem0
