@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 import PlanBadge from '../components/ui/PlanBadge'
 import ReviewCalendar from '../components/student/ReviewCalendar'
+import LeaderboardPanel from '../components/student/LeaderboardPanel'
 
 export default function Choice() {
   const navigate = useNavigate()
@@ -216,6 +217,9 @@ export default function Choice() {
 
       {/* Calendrier de révisions */}
       <ReviewCalendar userId={user?.id} />
+
+      {/* Classement anonyme */}
+      <LeaderboardPanel userId={user?.id} />
 
       {/* Parent dashboard link */}
       <button
