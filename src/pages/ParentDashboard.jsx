@@ -8,6 +8,7 @@ import StatsCard from '../components/parent/StatsCard'
 import SubjectsList from '../components/parent/SubjectsList'
 import VictoriesJournal from '../components/parent/VictoriesJournal'
 import ConversationHistoryPanel from '../components/parent/ConversationHistoryPanel'
+import InactivityAlertsPanel from '../components/parent/InactivityAlertsPanel'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
@@ -488,6 +489,9 @@ export default function ParentDashboard() {
 
               {/* Historique des conversations */}
               <ConversationHistoryPanel childId={selectedChild?.id} childName={selectedChild?.prenom} />
+
+              {/* Alertes d'inactivité */}
+              <InactivityAlertsPanel childId={selectedChild?.id} childName={selectedChild?.prenom} />
 
               {/* Knowledge Graph */}
               {childKG && <KnowledgeGraphPanel kg={childKG} />}
