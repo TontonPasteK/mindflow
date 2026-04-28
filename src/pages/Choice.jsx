@@ -165,6 +165,54 @@ export default function Choice() {
         />
       </div>
 
+      {/* Mode Épreuve */}
+      <div
+        onClick={() => navigate('/quiz')}
+        style={{
+          width: '100%',
+          maxWidth: '680px',
+          background: 'linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(59,130,246,0.05) 100%)',
+          border: '1px solid #3B82F6',
+          borderRadius: 'var(--r-xl)',
+          padding: '20px',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+          animation: 'fade-up 0.5s ease 0.1s both',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-4px)'
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(59,130,246,0.2)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          <span style={{ fontSize: '32px' }}>📝</span>
+          <div>
+            <h3 style={{
+              fontFamily: 'var(--f-title)',
+              fontSize: '18px',
+              margin: 0,
+              color: '#3B82F6',
+            }}>
+              Mode Épreuve
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', margin: '4px 0 0 0' }}>
+              Teste tes connaissances
+            </p>
+          </div>
+        </div>
+        <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.5', margin: 0 }}>
+          Quiz interactifs avec timer, feedback instantané et explications détaillées.
+          <br />
+          <span style={{ color: '#3B82F6', fontWeight: '600' }}>
+            {isPremium ? 'Questions personnalisées selon ton profil' : 'Passe Premium pour des questions adaptées'}
+          </span>
+        </p>
+      </div>
+
       {/* Parent dashboard link */}
       <button
         onClick={() => navigate('/parent')}

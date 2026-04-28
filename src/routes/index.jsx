@@ -11,6 +11,7 @@ import Onboarding      from '../pages/Onboarding'
 import DrMind          from '../pages/DrMind'
 import AvatarTransition from '../pages/AvatarTransition'
 import Session         from '../pages/Session'
+import QuizMode        from '../pages/QuizMode'
 import ParentDashboard from '../pages/ParentDashboard'
 import ParentOnboarding from '../pages/ParentOnboarding'
 import Pricing         from '../pages/Pricing'
@@ -39,6 +40,7 @@ export default function AppRoutes() {
       <Route path="/drMind"            element={<ProtectedRoute><DrMind /></ProtectedRoute>} />
       <Route path="/avatar-transition" element={<ProtectedRoute><AvatarTransition /></ProtectedRoute>} />
       <Route path="/session"           element={<ProtectedRoute><Session /></ProtectedRoute>} />
+      <Route path="/quiz"              element={<ProtectedRoute><QuizMode /></ProtectedRoute>} />
       <Route path="/parent"            element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
       <Route path="/parent-onboarding" element={<ProtectedRoute><ParentOnboarding /></ProtectedRoute>} />
       <Route path="/settings"          element={<ProtectedRoute><Settings /></ProtectedRoute>} />
