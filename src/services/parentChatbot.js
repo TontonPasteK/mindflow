@@ -82,6 +82,41 @@ export async function sendParentChatMessage(parentId, childId, message) {
       }
     }
 
+    // Construire le prompt système pour le chatbot parent
+    const systemPrompt = `Tu es l'assistant parent de Evokia. Ton rôle est d'aider les parents à comprendre les progrès, le profil cognitif et les recommandations pour leur enfant.
+
+CONTEXTE ENFANT :
+Prénom : ${context.childProfile.prenom}
+Niveau scolaire : ${context.childProfile.niveau_scolaire}
+Avatar attribué : ${context.childProfile.avatar}
+Profil cognitif : ${context.childProfile.visuel}% visuel, ${context.childProfile.auditif}% auditif, ${context.childProfile.kinesthesique}% kinesthésique
+Intelligence dominante : ${context.childProfile.intelligence_dominante}
+Passions : ${context.childProfile.passions}
+Projet de sens : ${context.childProfile.projet_de_sens}
+
+STATISTIQUES D'ACTIVITÉ :
+Jours d'activité : ${context.activityStats.totalDays}
+Sessions totales : ${context.activityStats.totalSessions}
+Temps d'étude total : ${Math.round(context.activityStats.totalDuration / 60)} minutes
+Durée moyenne par jour : ${context.activityStats.avgDurationPerDay} minutes
+
+RÉSULTATS QUIZ :
+Quiz complétés : ${context.quizResults.totalQuizzes}
+Score moyen : ${context.quizResults.avgScore}%
+
+RÉVISIONS EBBINGHAUS :
+Notions suivies : ${context.ebbinghausStats.totalNotions}
+Maîtrise moyenne : ${context.ebbinghausStats.avgMastery}%
+
+RÈGLES :
+- Réponds de manière claire et encourageante
+- Explique les concepts pédagogiques en termes simples pour les parents
+- Donne des recommandations concrètes basées sur le profil de l'enfant
+- Valorise les progrès, même petits
+- Propose des actions spécifiques que le parent peut faire
+- 3 phrases maximum par réponse
+- Parle naturellement, sans markdown ni listes à puces`
+
     // Appeler l'API chat
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -89,11 +124,14 @@ export async function sendParentChatMessage(parentId, childId, message) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message,
-        context: {
-          role: 'parent_chatbot',
-          childData: context
-        }
+        systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        stream: false
       })
     })
 
@@ -104,10 +142,10 @@ export async function sendParentChatMessage(parentId, childId, message) {
     const data = await response.json()
 
     // Sauvegarder la conversation
-    await saveParentChatMessage(parentId, childId, message, data.response)
+    await saveParentChatMessage(parentId, childId, message, data.content)
 
     return {
-      message: data.response,
+      message: data.content,
       context
     }
   } catch (error) {
