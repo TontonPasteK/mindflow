@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../services/supabase'
 import { createPortalSession } from '../services/stripe'
+import { deleteAllMemories } from '../services/mem0'
 import Button from '../components/ui/Button'
 import PlanBadge from '../components/ui/PlanBadge'
 import Modal from '../components/ui/Modal'
 import ReferralPanel from '../components/referral/ReferralPanel'
+import MemoryViewer from '../components/student/MemoryViewer'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -27,6 +29,14 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     setDeleteLoading(true)
     try {
+      // Supprimer toutes les mémoires Mem0 (droit à l'oubli)
+      try {
+        await deleteAllMemories(user.id)
+      } catch (mem0Error) {
+        console.error('Erreur suppression mémoires Mem0:', mem0Error)
+        // Continuer même si Mem0 échoue
+      }
+
       // Supprimer toutes les données de l'utilisateur
       const { error: profileError } = await supabase
         .from('profiles')
@@ -141,6 +151,11 @@ export default function Settings() {
           </Section>
         )}
 
+        {/* Mem0 memories */}
+        <Section title="Mes mémoires inter-sessions">
+          <MemoryViewer />
+        </Section>
+
         {/* Plan management */}
         <Section title="Abonnement">
           {isPremium ? (
@@ -211,6 +226,7 @@ export default function Settings() {
           <li>Profil cognitif</li>
           <li>Journal de victoires</li>
           <li>Connaissances et notions travaillées</li>
+          <li>Mémoires inter-sessions (Mem0)</li>
         </ul>
         <div style={{ display: 'flex', gap: '10px' }}>
           <Button variant="secondary" fullWidth onClick={() => setConfirmDelete(false)}>
