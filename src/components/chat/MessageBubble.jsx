@@ -1,7 +1,45 @@
 import { useState, useEffect, useRef } from 'react'
 import StrategyCard from './StrategyCard'
+import MathRenderer from '../math/MathRenderer'
 
 const MS_PER_WORD = 400
+
+// Fonction helper pour détecter et extraire les équations LaTeX
+function parseLatex(text) {
+  if (!text) return []
+
+  const parts = []
+  let lastIndex = 0
+  const regex = /\$\$([^$]+)\$\$|\$([^$]+)\$/g
+  let match
+
+  while ((match = regex.exec(text)) !== null) {
+    // Ajouter le texte avant l'équation
+    if (match.index > lastIndex) {
+      const plainText = text.substring(lastIndex, match.index)
+      if (plainText) {
+        parts.push({ type: 'text', content: plainText })
+      }
+    }
+
+    // Ajouter l'équation
+    const latex = match[1] || match[2]
+    const isDisplayMode = !!match[1] // $$...$$ est display mode
+    parts.push({ type: 'latex', content: latex, displayMode })
+
+    lastIndex = regex.lastIndex
+  }
+
+  // Ajouter le texte restant
+  if (lastIndex < text.length) {
+    const plainText = text.substring(lastIndex)
+    if (plainText) {
+      parts.push({ type: 'text', content: plainText })
+    }
+  }
+
+  return parts.length > 0 ? parts : [{ type: 'text', content: text }]
+}
 
 export default function MessageBubble({ role, content, strategies, fileAttachment, isSpeaking, isLatestAssistant, ttsEnabled, avatarName = 'Dr Mind' }) {
   const isMax = role === 'assistant'
@@ -58,6 +96,9 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
   const displayText = isMax && visibleCount < words.length
     ? words.slice(0, visibleCount).join(' ')
     : content
+
+  // Parser le contenu pour détecter les équations LaTeX
+  const parsedContent = parseLatex(displayText)
 
   return (
     <div style={{
@@ -125,7 +166,20 @@ export default function MessageBubble({ role, content, strategies, fileAttachmen
         )}
 
         {displayText ? (
-          <div>{displayText}</div>
+          <div>
+            {parsedContent.map((part, i) => {
+              if (part.type === 'latex') {
+                return (
+                  <MathRenderer
+                    key={i}
+                    latex={part.content}
+                    displayMode={part.displayMode}
+                  />
+                )
+              }
+              return <span key={i}>{part.content}</span>
+            })}
+          </div>
         ) : isMax && visibleCount === 0 ? (
           <div style={{ color: 'var(--accent)', opacity: 0.6 }}>▌</div>
         ) : null}
