@@ -7,11 +7,19 @@ export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
-export async function signUp({ email, password, prenom, niveau, isParent }) {
+export async function signUp({ email, password, prenom, niveau, isParent, dateNaissance, parentalConsent }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { prenom, niveau: niveau || null, role: isParent ? 'parent' : 'eleve' } },
+    options: {
+      data: {
+        prenom,
+        niveau: niveau || null,
+        role: isParent ? 'parent' : 'eleve',
+        date_naissance: dateNaissance || null, // RGPD mineurs
+        parental_consent: parentalConsent || false // RGPD mineurs
+      }
+    },
   })
   if (error) throw error
 
@@ -24,6 +32,8 @@ export async function signUp({ email, password, prenom, niveau, isParent }) {
         role: isParent ? 'parent' : 'eleve',
         prenom,
         niveau: niveau || null,
+        date_naissance: dateNaissance || null, // RGPD mineurs
+        parental_consent: parentalConsent || false, // RGPD mineurs
       }, { onConflict: 'user_id' })
 
     // Envoyer l'email de bienvenue aux parents

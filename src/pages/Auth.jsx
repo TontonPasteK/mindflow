@@ -7,7 +7,15 @@ import Input from '../components/ui/Input'
 export default function Auth() {
   const [params] = useSearchParams()
   const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'login')
-  const [form, setForm] = useState({ prenom: '', email: '', password: '', niveau: '', isParent: false })
+  const [form, setForm] = useState({
+    prenom: '',
+    email: '',
+    password: '',
+    niveau: '',
+    isParent: false,
+    dateNaissance: '', // RGPD mineurs
+    parentalConsent: false // RGPD mineurs
+  })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [globalError, setGlobalError] = useState('')
@@ -56,7 +64,37 @@ export default function Auth() {
       errs.password = 'Au moins 8 caractères'
     if (mode === 'signup' && !acceptedCGU)
       errs.cgu = 'Tu dois accepter les CGU pour continuer'
+
+    // RGPD mineurs - validation date de naissance
+    if (mode === 'signup' && !form.isParent && !form.dateNaissance) {
+      errs.dateNaissance = 'La date de naissance est requise'
+    }
+
+    // RGPD mineurs - vérification âge et consentement parental
+    if (mode === 'signup' && !form.isParent && form.dateNaissance) {
+      const age = calculateAge(form.dateNaissance)
+      if (age < 13) {
+        errs.dateNaissance = 'Tu dois avoir au moins 13 ans pour utiliser Evokia'
+      } else if (age < 15 && !form.parentalConsent) {
+        errs.parentalConsent = 'Le consentement parental est requis pour les moins de 15 ans'
+      }
+    }
+
     return errs
+  }
+
+  // Fonction pour calculer l'âge
+  const calculateAge = (dateString) => {
+    const today = new Date()
+    const birthDate = new Date(dateString)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+
+    return age
   }
 
   // BLOC 10 — connexion par code
@@ -84,7 +122,15 @@ export default function Auth() {
     setGlobalError('')
     try {
       if (mode === 'signup') {
-        await signUp({ email: form.email, password: form.password, prenom: form.prenom, niveau: form.niveau, isParent: form.isParent })
+        await signUp({
+          email: form.email,
+          password: form.password,
+          prenom: form.prenom,
+          niveau: form.niveau,
+          isParent: form.isParent,
+          dateNaissance: form.dateNaissance, // RGPD mineurs
+          parentalConsent: form.parentalConsent // RGPD mineurs
+        })
 
         // Redirection selon le rôle
         if (form.isParent) {
@@ -289,6 +335,57 @@ export default function Auth() {
                 {errors.niveau && (
                   <p style={{ fontSize: '12px', color: 'var(--error)', margin: 0 }}>{errors.niveau}</p>
                 )}
+              </div>
+              )}
+
+              {/* RGPD mineurs - Date de naissance */}
+              {!form.isParent && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{
+                  fontSize: '13px', fontWeight: '500',
+                  color: errors.dateNaissance ? 'var(--error)' : 'var(--text-2)',
+                }}>
+                  Date de naissance <span style={{ color: 'var(--accent)' }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  value={form.dateNaissance}
+                  onChange={update('dateNaissance')}
+                  required
+                  max={new Date().toISOString().split('T')[0]}
+                  style={{
+                    background: 'var(--bg-input)',
+                    border: `1px solid ${errors.dateNaissance ? 'var(--error)' : 'var(--border)'}`,
+                    borderRadius: 'var(--r-md)',
+                    color: form.dateNaissance ? 'var(--text)' : 'var(--text-3)',
+                    padding: '13px 16px',
+                    fontSize: '15px',
+                    width: '100%',
+                    outline: 'none',
+                  }}
+                />
+                {errors.dateNaissance && (
+                  <p style={{ fontSize: '12px', color: 'var(--error)', margin: 0 }}>{errors.dateNaissance}</p>
+                )}
+              </div>
+              )}
+
+              {/* RGPD mineurs - Consentement parental pour moins de 15 ans */}
+              {!form.isParent && form.dateNaissance && calculateAge(form.dateNaissance) < 15 && calculateAge(form.dateNaissance) >= 13 && (
+              <div>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.5' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.parentalConsent}
+                    onChange={e => { setForm(f => ({ ...f, parentalConsent: e.target.checked })); setErrors(er => ({ ...er, parentalConsent: '' })) }}
+                    style={{ marginTop: '2px', accentColor: 'var(--accent)', flexShrink: 0 }}
+                  />
+                  <span>
+                    En tant que parent/tuteur, j'autorise mon enfant à utiliser Evokia et j'accepte que ses données soient traitées conformément à notre{' '}
+                    <Link to="/privacy" target="_blank" style={{ color: 'var(--accent)' }}>politique de confidentialité</Link>
+                  </span>
+                </label>
+                {errors.parentalConsent && <p style={{ fontSize: '12px', color: 'var(--error)', margin: '4px 0 0' }}>{errors.parentalConsent}</p>}
               </div>
               )}
             </>
