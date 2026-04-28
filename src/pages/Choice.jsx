@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 import PlanBadge from '../components/ui/PlanBadge'
+import ReviewCalendar from '../components/student/ReviewCalendar'
 
 export default function Choice() {
   const navigate = useNavigate()
@@ -212,6 +213,9 @@ export default function Choice() {
           </span>
         </p>
       </div>
+
+      {/* Calendrier de révisions */}
+      <ReviewCalendar userId={user?.id} />
 
       {/* Parent dashboard link */}
       <button
