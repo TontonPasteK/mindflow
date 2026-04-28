@@ -1,6 +1,4 @@
 import { supabase } from './supabase'
-import { buildDrMindPrompt, buildFreePrompt } from './prompts'
-import { chatWithAI } from './chat'
 
 /**
  * Génère des questions de quiz personnalisées
@@ -15,15 +13,26 @@ export async function generateQuizQuestions(subject, level, count, profile = nul
     // Construire le prompt pour générer des questions
     const prompt = buildQuizPrompt(subject, level, count, profile)
 
-    // Appeler l'IA pour générer les questions
-    const response = await chatWithAI(
-      prompt,
-      profile ? 'premium' : 'free',
-      profile
-    )
+    // Appeler l'IA via l'API
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemPrompt: prompt,
+        messages: [{ role: 'user', content: 'Génère les questions de quiz maintenant.' }],
+        stream: false,
+        userId: profile?.user_id || null,
+        userName: profile?.prenom || null,
+        subject: subject
+      })
+    })
 
-    // Parser la réponse JSON
-    const questions = parseQuizResponse(response)
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const questions = parseQuizResponse(data.content)
 
     return questions
   } catch (error) {
