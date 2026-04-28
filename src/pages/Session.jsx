@@ -5,6 +5,7 @@ import { useSession } from '../context/SessionContext'
 import { useChat } from '../hooks/useChat'
 import { useVoice } from '../hooks/useVoice'
 import { useTTS } from '../hooks/useTTS'
+import { useVision } from '../hooks/useVision'
 import { getUserVictories, updateStreak } from '../services/supabase'
 
 import MaxAvatar      from '../components/avatar/MaxAvatar'
@@ -70,6 +71,9 @@ export default function Session() {
 
   // BLOC 10 — Confirmation avant de quitter
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false)
+
+  // Vision hook pour OCR
+  const { processing: visionProcessing, progress: visionProgress, result: visionResult, error: visionError, extractFromImage, extractFromPDF } = useVision()
 
   const { isSpeaking, speak, stop: stopTTS } = useTTS({
     enabled: ttsEnabled,
@@ -314,9 +318,46 @@ export default function Session() {
   }
 
   // ── Document scan ────────────────────────────────────────
-  const handleScan = useCallback((base64, mimeType) => {
-    sendMessage('', { base64, mimeType })
-  }, [sendMessage])
+  const handleScan = useCallback(async (base64, mimeType) => {
+    // Si c'est une image, extraire le texte avec OCR
+    if (mimeType.startsWith('image/')) {
+      try {
+        const ocrResult = await extractFromImage(base64, mimeType, 'fra')
+
+        if (ocrResult.success && ocrResult.text) {
+          // Envoyer le texte extrait avec l'image
+          const message = `Voici un document que j'ai scanné. Voici le texte extrait :\n\n${ocrResult.text}\n\nPeux-tu m'aider avec ce contenu ?`
+          sendMessage(message, { base64, mimeType })
+        } else {
+          // Si l'OCR échoue, envoyer quand même l'image
+          sendMessage('Voici un document. Peux-tu m\'aider à le lire ?', { base64, mimeType })
+        }
+      } catch (error) {
+        console.error('Erreur OCR:', error)
+        // En cas d'erreur, envoyer l'image sans OCR
+        sendMessage('Voici un document. Peux-tu m\'aider à le lire ?', { base64, mimeType })
+      }
+    } else if (mimeType === 'application/pdf') {
+      // Pour les PDF, essayer d'extraire le texte
+      try {
+        const pdfResult = await extractFromPDF(base64, 'fra')
+
+        if (pdfResult.success && pdfResult.text) {
+          const message = `Voici un PDF. Voici le contenu :\n\n${pdfResult.text}\n\nPeux-tu m'aider avec ce contenu ?`
+          sendMessage(message, { base64, mimeType })
+        } else {
+          // Si l'extraction PDF échoue
+          sendMessage('Voici un PDF. Peux-tu m\'aider à le lire ?', { base64, mimeType })
+        }
+      } catch (error) {
+        console.error('Erreur PDF:', error)
+        sendMessage('Voici un PDF. Peux-tu m\'aider à le lire ?', { base64, mimeType })
+      }
+    } else {
+      // Pour les autres types de fichiers
+      sendMessage('Voici un document. Peux-tu m\'aider ?', { base64, mimeType })
+    }
+  }, [sendMessage, extractFromImage, extractFromPDF])
 
   // ── Fin de session ───────────────────────────────────────
   const handleEndSession = useCallback(async () => {
@@ -828,7 +869,12 @@ export default function Session() {
               gap: '16px',
               background: 'var(--bg-card)',
             }}>
-              <DocumentScanner onScan={handleScan} isPremium={isSessionPremium} />
+              <DocumentScanner
+                onScan={handleScan}
+                isPremium={isSessionPremium}
+                ocrProgress={visionProgress}
+                ocrProcessing={visionProcessing}
+              />
               <VoiceButton
                 isListening={isListening}
                 isSpeaking={isSpeaking}
@@ -856,7 +902,12 @@ export default function Session() {
           ) : (
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0' }}>
               <div style={{ padding: '12px 0 12px 16px', flexShrink: 0 }}>
-                <DocumentScanner onScan={handleScan} isPremium={isSessionPremium} />
+                <DocumentScanner
+                onScan={handleScan}
+                isPremium={isSessionPremium}
+                ocrProgress={visionProgress}
+                ocrProcessing={visionProcessing}
+              />
               </div>
               <div style={{ flex: 1 }}>
                 <InputArea

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 
-export default function DocumentScanner({ onScan, isPremium }) {
+export default function DocumentScanner({ onScan, isPremium, ocrProgress = 0, ocrProcessing = false }) {
   const cameraRef = useRef(null)
   const fileRef   = useRef(null)
   const [scanning, setScanning] = useState(false)
@@ -117,6 +117,38 @@ export default function DocumentScanner({ onScan, isPremium }) {
           </>
         )}
       </button>
+
+      {/* OCR Progress indicator */}
+      {ocrProcessing && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginTop: '8px',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          fontSize: '12px',
+          color: 'var(--text-2)',
+          whiteSpace: 'nowrap',
+          zIndex: 10,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              border: '2px solid var(--border)',
+              borderTopColor: 'var(--accent)',
+              borderRadius: '50%',
+              animation: 'spin 0.7s linear infinite',
+            }} />
+            <span>Analyse OCR {ocrProgress}%</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
